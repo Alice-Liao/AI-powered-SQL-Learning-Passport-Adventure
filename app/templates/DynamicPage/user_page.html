@@ -1,0 +1,172 @@
+{% extends 'app/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'my_app/user_page.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>User Dashboard</h1>
+    
+    <div class="filter-section">
+        <form method="get">
+            <div class="filter-group">
+                <label class="filter-header">
+                    <input type="checkbox" id="enableTimeSlot" class="filter-enable" 
+                           {% if request.GET.timeSlot %}checked{% endif %}>
+                    <h3>Time Slot</h3>
+                </label>
+                <select name="timeSlot" class="filter-select" 
+                        {% if not request.GET.timeSlot %}disabled{% endif %}>
+                    {% for value, label in time_slots %}
+                        <option value="{{ value }}" {% if request.GET.timeSlot == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-header">
+                    <input type="checkbox" id="enableDifficulty" class="filter-enable"
+                           {% if request.GET.difficultyLevel %}checked{% endif %}>
+                    <h3>Difficulty Level</h3>
+                </label>
+                <select name="difficultyLevel" class="filter-select"
+                        {% if not request.GET.difficultyLevel %}disabled{% endif %}>
+                    {% for value, label in difficulty_levels %}
+                        <option value="{{ value }}" {% if request.GET.difficultyLevel == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-header">
+                    <input type="checkbox" id="enableStatus" class="filter-enable"
+                           {% if selected_statuses %}checked{% endif %}>
+                    <h3>Task Completion Status</h3>
+                </label>
+                <select name="completionStatus" class="filter-select" multiple
+                        {% if not selected_statuses %}disabled{% endif %}>
+                    {% for value, label in completion_statuses %}
+                        <option value="{{ value }}" {% if value in selected_statuses %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <small class="help-text">Hold Ctrl/Cmd to select multiple options</small>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-header">
+                    <input type="checkbox" id="enableQueryType" class="filter-enable"
+                           {% if selected_query_types %}checked{% endif %}>
+                    <h3>Query Type</h3>
+                </label>
+                <select name="queryType" class="filter-select" multiple
+                        {% if not selected_query_types %}disabled{% endif %}>
+                    {% for value, label in query_types %}
+                        <option value="{{ value }}" {% if value in selected_query_types %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <small class="help-text">Hold Ctrl/Cmd to select multiple options</small>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-header">
+                    <input type="checkbox" id="enableErrors" class="filter-enable"
+                           {% if request.GET.errorHistory %}checked{% endif %}>
+                    <h3>Error History</h3>
+                </label>
+                <select name="errorHistory" class="filter-select"
+                        {% if not request.GET.errorHistory %}disabled{% endif %}>
+                    <option value="">Show All Tasks</option>
+                    <option value="true" {% if request.GET.errorHistory == "true" %}selected{% endif %}>
+                        Show Only Tasks with Errors
+                    </option>
+                </select>
+            </div>
+            
+            <div class="filter-actions">
+                <button class="apply-btn" type="submit">Apply Filters</button>
+                <button class="reset-btn" type="reset">Reset Filters</button>
+            </div>
+        </form>
+    </div>
+    
+    <div class="result-count">Showing <span id="resultCount">{{ tasks|length }}</span> results</div>
+    
+    <div class="table-container">
+        <table id="tasksTable">
+            <thead>
+                <tr>
+                    <th>Task ID</th>
+                    <th>Task Name</th>
+                    <th>Difficulty</th>
+                    <th>Status</th>
+                    <th>Start Date</th>
+                    <th>Last Updated</th>
+                    <th>Query Type</th>
+                    <th>Errors</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                <tr>
+                    <td>{{ task.id }}</td>
+                    <td>{{ task.name }}</td>
+                    <td>{{ task.difficulty }}</td>
+                    <td>{{ task.status }}</td>
+                    <td>{{ task.start_date }}</td>
+                    <td>{{ task.last_updated }}</td>
+                    <td>{{ task.query_type }}</td>
+                    <td>{{ task.errors }}</td>
+                    <td><a href="#">View</a></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="no-data">No tasks found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Update result count
+        document.getElementById("resultCount").textContent = document.querySelectorAll("tbody tr:not(.no-data)").length;
+
+        // Handle enable/disable filters
+        document.querySelectorAll('.filter-enable').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const select = this.closest('.filter-group').querySelector('.filter-select');
+                select.disabled = !this.checked;
+                if (!this.checked) {
+                    select.value = select.multiple ? [] : '';
+                }
+            });
+        });
+
+        // Handle reset button
+        document.querySelector('.reset-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            // Reset all checkboxes and disable selects
+            document.querySelectorAll('.filter-enable').forEach(checkbox => {
+                checkbox.checked = false;
+                const select = checkbox.closest('.filter-group').querySelector('.filter-select');
+                select.disabled = true;
+                select.value = select.multiple ? [] : '';
+            });
+            document.querySelector('form').submit();
+        });
+    });
+</script>
+{% endblock %}
