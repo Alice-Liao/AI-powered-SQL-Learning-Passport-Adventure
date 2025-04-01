@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "app"
 ]
 
 MIDDLEWARE = [
@@ -83,7 +84,7 @@ DATABASES = {
         'NAME': os.getenv("DATABASE_NAME", "sql_training"),
         'USER': os.getenv("DATABASE_USER", "admin"),
         'PASSWORD': os.getenv("DATABASE_PASSWORD", "database_group8"),
-        'HOST': os.getenv("DATABASE_HOST", "34.72.11.31"),
+        'HOST': os.getenv("DATABASE_HOST", "34.121.161.236"),
         'PORT': os.getenv("DATABASE_PORT", "5432"),
     }
 }
@@ -124,7 +125,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # 让 Django 收集所有静态文件到 "staticfiles/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
