@@ -66,7 +66,7 @@ class Profile(models.Model):
 
 class Progress(models.Model):
     progress_id = models.AutoField(primary_key=True)
-    profile = models.ForeignKey(Profile, models.DO_NOTHING, blank=True, null=True)
+    profile_id = models.ForeignKey(Profile, models.DO_NOTHING, blank=True, null=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
     latest_advice_from_llm = models.CharField(max_length=255, blank=True, null=True)
     finished_country = models.CharField(max_length=50, blank=True, null=True)
