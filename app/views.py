@@ -13,6 +13,7 @@ from .forms import SignUpForm, LoginForm
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import check_password
+from django.db import models
 
 # Create your views here.
 
@@ -144,12 +145,22 @@ def user_page(request):
         if selected_errors == 'true':
             tasks = tasks.filter(tid__in=error_history.values_list('task_id', flat=True))
 
-        # Convert to list and annotate with status
+        # Get error counts for each task
+        error_counts = ErrorsRecord.objects.values('task_id').annotate(
+            error_count=models.Count('error_id')
+        )
+        
+        # Create error count dictionary for quick lookup
+        error_dict = {item['task_id']: item['error_count'] for item in error_counts}
+        print("Error dict:", error_dict)
+
+        # Convert to list and annotate with status and error count
         tasks = list(tasks)
         for task in tasks:
             status_info = status_dict.get(task.tid, {'status': 0, 'date': None})
             task.status = status_info['status']
             task.start_date = status_info['date']
+            task.error_count = error_dict.get(task.tid, 0)
 
         # Apply status filter after annotation
         if selected_statuses:

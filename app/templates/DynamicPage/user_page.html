@@ -183,6 +183,7 @@
                     <th>Difficulty</th>
                     <th>Status</th>
                     <th>Date</th>
+                    <th>Errors</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -202,11 +203,12 @@
                         {% endif %}
                     </td>
                     <td>{{ task.start_date|default:"-" }}</td>
+                    <td>{{ task.error_count }}</td>
                     <td><a href="#">View</a></td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="no-data">No tasks found</td>
+                    <td colspan="7" class="no-data">No tasks found</td>
                 </tr>
                 {% endfor %}
             </tbody>
