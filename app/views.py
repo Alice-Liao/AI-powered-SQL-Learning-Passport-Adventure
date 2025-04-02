@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Users, Task, QueryHistory, ErrorsRecord, Progress
+from .models import Users, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus
 from django.db import connection
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
@@ -78,10 +78,35 @@ def testusers(request):
 @login_required(login_url='login')
 def user_page(request):
     try:
-        # Get the current logged-in user's email and find corresponding Users record
         current_user_email = request.user.email
         user_record = Users.objects.get(email=current_user_email)
         user_id = user_record.user_id
+
+        # Get user's query history with updated date field
+        query_history = QueryHistory.objects.filter(user_id=user_id).order_by('-date')
+
+        # Get user's error history with updated date field
+        error_history = ErrorsRecord.objects.filter(user_id=user_id).order_by('-date')
+
+        # Get user's progress
+        try:
+            user_progress = Progress.objects.get(user_id=user_id)
+        except Progress.DoesNotExist:
+            user_progress = None
+
+        # Get user's task statuses
+        task_statuses = TaskStatus.objects.filter(user_id=user_id)
+        
+        # Get all tasks with their status for this user
+        tasks = Task.objects.all()
+        for task in tasks:
+            try:
+                status = task_statuses.get(task=task)
+                task.status = status.status
+                task.start_date = status.date
+            except TaskStatus.DoesNotExist:
+                task.status = 0  # Not started
+                task.start_date = None
 
         # Define filter options
         time_slots = [
@@ -120,59 +145,37 @@ def user_page(request):
         selected_errors = request.GET.get('errorHistory')
         selected_query_types = request.GET.getlist('queryType')
 
-        # Get user's query history
-        query_history = QueryHistory.objects.filter(user_id=user_id).order_by('-timestamp')
-
-        # Get user's error history
-        error_history = ErrorsRecord.objects.filter(user_id=user_id).order_by('-timestamp')
-
-        # Get user's progress
-        user_progress = Progress.objects.filter(user_id=user_id).first()
-
-        # Get all tasks
-        tasks = Task.objects.all().select_related('queryid')
-
-        # Apply filters
+        # Apply filters (updated for new model structure)
         if selected_time != 'all':
             days = int(selected_time)
-            cutoff_date = timezone.now() - timezone.timedelta(days=days)
-            tasks = tasks.filter(time__gte=cutoff_date)
+            cutoff_date = timezone.now().date() - timezone.timedelta(days=days)
+            query_history = query_history.filter(date__gte=cutoff_date)
+            error_history = error_history.filter(date__gte=cutoff_date)
 
         if selected_diff != 'all':
             tasks = tasks.filter(difficulty=selected_diff)
 
-        # Get task completion status for the current user
-        completed_task_ids = set(QueryHistory.objects.filter(
-            user_id=user_id
-        ).values_list('task_id', flat=True).distinct())
+        if selected_query_types:
+            query_history = query_history.filter(query_content__icontains=selected_query_types)
 
-        # Prepare task data
-        tasks_list = []
-        for task in tasks:
-            task_data = {
-                'id': task.tid,
-                'name': task.tname,
-                'difficulty': task.difficulty,
-                'status': 'completed' if task.tid in completed_task_ids else 'not_started',
-                'start_date': task.time,
-                'last_updated': query_history.filter(task_id=task.tid).order_by('-timestamp').first(),
-                'query_type': task.queryid.content if task.queryid else '',
-                'errors': error_history.filter(task_id=task.tid).count()
-            }
-            tasks_list.append(task_data)
+        if selected_errors == 'true':
+            tasks = tasks.filter(tid__in=error_history.values_list('task_id', flat=True))
 
         context = {
             'user_data': user_record,
-            'query_history': query_history,
-            'error_history': error_history,
+            'query_history': query_history[:5],  # Limit to 5 most recent
+            'error_history': error_history[:5],  # Limit to 5 most recent
             'user_progress': user_progress,
-            'tasks': tasks_list,  # Send the prepared task list
+            'tasks': tasks,
             'time_slots': time_slots,
             'difficulty_levels': difficulty_levels,
-            'completion_statuses': completion_statuses,
-            'query_types': query_types,
+            'completion_statuses': [
+                (0, 'Not Started'),
+                (1, 'In Progress'),
+                (2, 'Completed'),
+                (3, 'Failed')
+            ],
             'selected_statuses': selected_statuses,
-            'selected_query_types': selected_query_types,
         }
 
         return render(request, 'DynamicPage/user_page.html', context)
