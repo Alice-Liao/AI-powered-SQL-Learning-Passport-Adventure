@@ -139,12 +139,6 @@ def user_page(request):
             query_history = query_history.filter(date__gte=cutoff_date)
             error_history = error_history.filter(date__gte=cutoff_date)
 
-        if selected_diff != 'all':
-            tasks = tasks.filter(difficulty=int(selected_diff))
-
-        if selected_errors == 'true':
-            tasks = tasks.filter(tid__in=error_history.values_list('task_id', flat=True))
-
         # Get error counts for each task
         error_counts = ErrorsRecord.objects.values('task_id').annotate(
             error_count=models.Count('error_id')
@@ -152,7 +146,10 @@ def user_page(request):
         
         # Create error count dictionary for quick lookup
         error_dict = {item['task_id']: item['error_count'] for item in error_counts}
-        print("Error dict:", error_dict)
+
+        # Apply difficulty filter if selected
+        if selected_diff != 'all':
+            tasks = tasks.filter(difficulty=int(selected_diff))
 
         # Convert to list and annotate with status and error count
         tasks = list(tasks)
@@ -166,6 +163,10 @@ def user_page(request):
         if selected_statuses:
             status_values = [int(status) for status in selected_statuses]
             tasks = [task for task in tasks if task.status in status_values]
+
+        # Apply error filter - show only tasks with errors if selected
+        if selected_errors == 'true':
+            tasks = [task for task in tasks if task.error_count > 0]
 
         context = {
             'user_data': user_record,
