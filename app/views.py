@@ -82,10 +82,8 @@ def user_page(request):
         user_record = Users.objects.get(email=current_user_email)
         user_id = user_record.user_id
 
-        # Get user's query history with updated date field
+        # Get user's query and error history
         query_history = QueryHistory.objects.filter(user_id=user_id).order_by('-date')
-
-        # Get user's error history with updated date field
         error_history = ErrorsRecord.objects.filter(user_id=user_id).order_by('-date')
 
         # Get user's progress
@@ -94,20 +92,16 @@ def user_page(request):
         except Progress.DoesNotExist:
             user_progress = None
 
-        # Get user's task statuses
-        task_statuses = TaskStatus.objects.filter(user_id=user_id)
+        # Get task statuses for this user
+        task_statuses = TaskStatus.objects.filter(user_id=user_id).select_related('task')
         
-        # Get all tasks with their status for this user
-        tasks = Task.objects.all()
-        for task in tasks:
-            try:
-                status = task_statuses.get(task=task)
-                task.status = status.status
-                task.start_date = status.date
-            except TaskStatus.DoesNotExist:
-                task.status = 0  # Not started
-                task.start_date = None
+        # Create a dictionary of task statuses for quick lookup
+        status_dict = {status.task_id: {'status': status.status, 'date': status.date} 
+                      for status in task_statuses}
 
+        # Get all tasks and annotate with status
+        tasks = Task.objects.all().select_related('cid')
+        
         # Define filter options
         time_slots = [
             ('all', 'All Time'),
@@ -120,32 +114,24 @@ def user_page(request):
         
         difficulty_levels = [
             ('all', 'All Levels'),
-            ('easy', 'Easy'),
-            ('medium', 'Medium'),
-            ('hard', 'Hard')
+            (1, 'Easy'),
+            (2, 'Medium'),
+            (3, 'Hard')
         ]
         
         completion_statuses = [
-            ('not_started', 'Not Started'),
-            ('in_progress', 'In Progress'),
-            ('completed', 'Completed'),
-            ('failed', 'Failed')
+            (0, 'Not Started'),
+            (1, 'In Progress'),
+            (2, 'Completed'),
         ]
         
-        query_types = [
-            ('select', 'SELECT'),
-            ('union', 'UNION'),
-            ('join', 'JOIN')
-        ]
-
         # Get filter values from request
         selected_time = request.GET.get('timeSlot', 'all')
         selected_diff = request.GET.get('difficultyLevel', 'all')
         selected_statuses = request.GET.getlist('completionStatus')
         selected_errors = request.GET.get('errorHistory')
-        selected_query_types = request.GET.getlist('queryType')
 
-        # Apply filters (updated for new model structure)
+        # Apply filters
         if selected_time != 'all':
             days = int(selected_time)
             cutoff_date = timezone.now().date() - timezone.timedelta(days=days)
@@ -153,28 +139,32 @@ def user_page(request):
             error_history = error_history.filter(date__gte=cutoff_date)
 
         if selected_diff != 'all':
-            tasks = tasks.filter(difficulty=selected_diff)
-
-        if selected_query_types:
-            query_history = query_history.filter(query_content__icontains=selected_query_types)
+            tasks = tasks.filter(difficulty=int(selected_diff))
 
         if selected_errors == 'true':
             tasks = tasks.filter(tid__in=error_history.values_list('task_id', flat=True))
 
+        # Convert to list and annotate with status
+        tasks = list(tasks)
+        for task in tasks:
+            status_info = status_dict.get(task.tid, {'status': 0, 'date': None})
+            task.status = status_info['status']
+            task.start_date = status_info['date']
+
+        # Apply status filter after annotation
+        if selected_statuses:
+            status_values = [int(status) for status in selected_statuses]
+            tasks = [task for task in tasks if task.status in status_values]
+
         context = {
             'user_data': user_record,
-            'query_history': query_history[:5],  # Limit to 5 most recent
-            'error_history': error_history[:5],  # Limit to 5 most recent
+            'query_history': query_history[:5],
+            'error_history': error_history[:5],
             'user_progress': user_progress,
             'tasks': tasks,
             'time_slots': time_slots,
             'difficulty_levels': difficulty_levels,
-            'completion_statuses': [
-                (0, 'Not Started'),
-                (1, 'In Progress'),
-                (2, 'Completed'),
-                (3, 'Failed')
-            ],
+            'completion_statuses': completion_statuses,
             'selected_statuses': selected_statuses,
         }
 

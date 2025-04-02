@@ -15,6 +15,16 @@ class Admins(models.Model):
         managed = False
         db_table = 'admins'
 
+
+class Countries(models.Model):
+    cid = models.AutoField(primary_key=True)
+    cname = models.CharField(max_length=50)
+
+    class Meta:
+        managed = False
+        db_table = 'countries'
+
+
 class ErrorsRecord(models.Model):
     error_id = models.AutoField(primary_key=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
@@ -81,7 +91,7 @@ class Task(models.Model):
     time = models.DateField(blank=True, null=True)
     hint = models.CharField(max_length=30, blank=True, null=True)
     description = models.CharField(max_length=30, blank=True, null=True)
-    country = models.CharField(blank=True, null=True)
+    cid = models.ForeignKey(Countries, models.DO_NOTHING, db_column='cid')
 
     class Meta:
         managed = False
@@ -122,10 +132,10 @@ class Users(models.Model):
 
 class Visa(models.Model):
     vid = models.AutoField(primary_key=True)
-    vname = models.CharField(max_length=10, blank=True, null=True)
     ispassed = models.BooleanField(blank=True, null=True)
     issuedate = models.DateField(blank=True, null=True)
     userid = models.ForeignKey(Users, models.DO_NOTHING, db_column='userid', blank=True, null=True)
+    cid = models.ForeignKey(Countries, models.DO_NOTHING, db_column='cid')
 
     class Meta:
         managed = False
