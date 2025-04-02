@@ -40,6 +40,18 @@
         {% endif %}
     </div>
 
+    <!-- Visa Section -->
+    <div class="visa-section">
+        <h2>Visa Status</h2>
+        {% if user_visa %}
+            <p>Visa Name: {{ user_visa.vname|default:"None" }}</p >
+            <p>Visa Status: {{ user_visa.ispassed|default:"None" }}</p >
+            <p>Visa Issue Date: {{ user_visa.issuedate|default:"None" }}</p >
+        {% else %}
+            <p>No visa data available</p >
+        {% endif %}
+    </div>
+
     <!-- Query History Section -->
     <div class="history-section">
         <h2>Recent Queries</h2>
@@ -170,9 +182,8 @@
                     <th>Task Name</th>
                     <th>Difficulty</th>
                     <th>Status</th>
-                    <th>Start Date</th>
-                    <th>Last Updated</th>
-                    <th>Query Type</th>
+                    <th>Date</th>
+                    <th>Query</th>
                     <th>Errors</th>
                     <th>Actions</th>
                 </tr>

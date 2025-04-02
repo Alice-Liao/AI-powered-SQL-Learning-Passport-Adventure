@@ -106,12 +106,12 @@ class QueryHistory(models.Model):
 
 class Task(models.Model):
     tid = models.AutoField(primary_key=True)
-    difficulty = models.IntegerField(blank=True, null=True)
     tname = models.CharField(max_length=30, blank=True, null=True)
+    difficulty = models.IntegerField(blank=True, null=True)
     time = models.DateField(blank=True, null=True)
+    queryid = models.ForeignKey(Queries, models.DO_NOTHING, db_column='queryid', blank=True, null=True)
     hint = models.CharField(max_length=30, blank=True, null=True)
     description = models.CharField(max_length=30, blank=True, null=True)
-    queryid = models.ForeignKey(Queries, models.DO_NOTHING, db_column='queryid', blank=True, null=True)
 
     class Meta:
         managed = False

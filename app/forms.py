@@ -7,7 +7,7 @@ from django.contrib.auth.hashers import make_password
 
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(max_length=254, required=True)
-    name = forms.CharField(max_length=30, required=True)  # Add name field
+    name = forms.CharField(max_length=30, required=True)
     
     class Meta:
         model = User
@@ -21,11 +21,11 @@ class SignUpForm(UserCreationForm):
     
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.username = self.cleaned_data['email']  # Use email as username
+        user.username = self.cleaned_data['email']
         user.email = self.cleaned_data['email']
         if commit:
             user.save()
-            # Create record in your Users table
+            # Create record in Users table with hashed password
             Users.objects.create(
                 name=self.cleaned_data['name'],
                 email=self.cleaned_data['email'],

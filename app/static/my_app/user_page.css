@@ -263,7 +263,7 @@ tr:hover {
 .logout-btn {
     padding: 8px 16px;
     background-color: #dc3545;
-    color: white;
+    color: white !important;
     text-decoration: none;
     border-radius: 4px;
     font-weight: 500;
