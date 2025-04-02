@@ -1,9 +1,13 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import Users, Task
 from django.db import connection
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
 from django.utils import timezone
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 
 # Create your views here.
 
@@ -135,3 +139,42 @@ def user_page(request):
     }
 
     return render(request, 'DynamicPage/user_page.html', context)
+
+def signup_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+
+        if password1 != password2:
+            return render(request, 'app/signup.html', {'error': 'Passwords do not match'})
+
+        try:
+            user = User.objects.create_user(username=username, email=email, password=password1)
+            login(request, user)
+            return redirect('user-page')  # Redirect to dashboard after signup
+        except Exception as e:
+            return render(request, 'app/signup.html', {'error': str(e)})
+
+    return render(request, 'app/signup.html')
+
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            return redirect('user-page')  # Redirect to dashboard after login
+        else:
+            return render(request, 'app/login.html', {'error': 'Invalid username or password'})
+
+    return render(request, 'app/login.html')
+
+# Add login_required decorator to views that require authentication
+@login_required(login_url='login')
+def user_page(request):
+    # Your existing user_page view code here
+    pass
