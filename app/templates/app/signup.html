@@ -9,29 +9,57 @@
 <div class="auth-container">
     <div class="auth-box">
         <h2>Sign Up</h2>
+        
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
         <form method="post">
             {% csrf_token %}
-            {% if error %}
-            <div class="error-message">{{ error }}</div>
-            {% endif %}
             <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
+                <label for="id_email">Email</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                <div class="error-feedback">{{ form.email.errors.0 }}</div>
+                {% endif %}
             </div>
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
+                <label for="id_name">Name</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                <div class="error-feedback">{{ form.name.errors.0 }}</div>
+                {% endif %}
             </div>
             <div class="form-group">
-                <label for="password1">Password</label>
-                <input type="password" id="password1" name="password1" required>
+                <label for="id_username">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                <div class="error-feedback">{{ form.username.errors.0 }}</div>
+                {% endif %}
             </div>
             <div class="form-group">
-                <label for="password2">Confirm Password</label>
-                <input type="password" id="password2" name="password2" required>
+                <label for="id_password1">Password</label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}
+                <div class="error-feedback">{{ form.password1.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="id_password2">Confirm Password</label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}
+                <div class="error-feedback">{{ form.password2.errors.0 }}</div>
+                {% endif %}
             </div>
             <button type="submit" class="auth-button">Sign Up</button>
         </form>
+        
         <div class="auth-links">
             <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
         </div>

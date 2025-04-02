@@ -7,8 +7,69 @@
 
 {% block content %}
 <div class="container">
-    <h1>User Dashboard</h1>
-    
+    <div class="page-header">
+        <h1>Welcome, {{ user_data.name }}!</h1>
+        <div class="header-actions">
+            <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message {{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Progress Section -->
+    <div class="progress-section">
+        <h2>Your Progress</h2>
+        {% if user_progress %}
+            <div class="progress-bar">
+                <div class="progress" style="width: {{ user_progress.progress_percentage|default:0 }}%">
+                    {{ user_progress.progress_percentage|default:0 }}%
+                </div>
+            </div>
+            <p>Latest Advice: {{ user_progress.latest_advice_from_llm|default:"No advice yet" }}</p>
+            <p>Completed Countries: {{ user_progress.finished_country|default:"None" }}</p>
+        {% else %}
+            <p>No progress data available</p>
+        {% endif %}
+    </div>
+
+    <!-- Query History Section -->
+    <div class="history-section">
+        <h2>Recent Queries</h2>
+        <div class="query-list">
+            {% for query in query_history|slice:":5" %}
+            <div class="query-item">
+                <p class="query-content">{{ query.query_content }}</p>
+                <p class="query-time">{{ query.timestamp }}</p>
+            </div>
+            {% empty %}
+            <p>No recent queries</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Error History Section -->
+    <div class="history-section">
+        <h2>Recent Errors</h2>
+        <div class="error-list">
+            {% for error in error_history|slice:":5" %}
+            <div class="error-item">
+                <p class="error-content">{{ error.error_content }}</p>
+                <p class="error-time">{{ error.timestamp }}</p>
+            </div>
+            {% empty %}
+            <p>No recent errors</p>
+            {% endfor %}
+        </div>
+    </div>
+
     <div class="filter-section">
         <form method="get">
             <div class="filter-group">

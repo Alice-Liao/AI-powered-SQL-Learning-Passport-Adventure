@@ -57,7 +57,7 @@ class Profile(models.Model):
     pid = models.AutoField(primary_key=True)
     llmadvice = models.CharField(max_length=30, blank=True, null=True)
     userid = models.ForeignKey('Users', models.DO_NOTHING, db_column='userid', blank=True, null=True)
-    progressid = models.ForeignKey('Progress', models.DO_NOTHING, db_column='progressid', blank=True, null=True)
+    progressid = models.ForeignKey('Progress', models.DO_NOTHING, db_column='progressid', blank=True, null=True, related_name='profile_progress')
 
     class Meta:
         managed = False
@@ -66,7 +66,7 @@ class Profile(models.Model):
 
 class Progress(models.Model):
     progress_id = models.AutoField(primary_key=True)
-    profile_id = models.ForeignKey(Profile, models.DO_NOTHING, blank=True, null=True)
+    profile = models.ForeignKey(Profile, models.DO_NOTHING, db_column='profile_id', blank=True, null=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
     latest_advice_from_llm = models.CharField(max_length=255, blank=True, null=True)
     finished_country = models.CharField(max_length=50, blank=True, null=True)

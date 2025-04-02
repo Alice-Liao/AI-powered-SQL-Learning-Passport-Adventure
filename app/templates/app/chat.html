@@ -1,0 +1,100 @@
+{% extends 'app/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'my_app/chat.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-header">
+        <h2>SQL Learning Assistant</h2>
+        <button id="clearChat" class="clear-button">Clear Chat</button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+        <div class="message system">
+            <div class="message-content">
+                Hello! I'm your SQL learning assistant. How can I help you today?
+            </div>
+            <div class="message-time">Just now</div>
+        </div>
+        {% for message in chat_history %}
+            <div class="message {% if message.is_user %}user{% else %}assistant{% endif %}">
+                <div class="message-content">
+                    {{ message.content }}
+                </div>
+                <div class="message-time">{{ message.timestamp }}</div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <form class="chat-input-form" method="post" id="chatForm">
+        {% csrf_token %}
+        <div class="chat-input-container">
+            <textarea 
+                name="message" 
+                id="messageInput" 
+                placeholder="Type your message here..."
+                rows="1"
+                required
+            ></textarea>
+            <button type="submit" class="send-button">
+                <span class="send-icon">➤</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const chatForm = document.getElementById('chatForm');
+    const clearButton = document.getElementById('clearChat');
+
+    // Auto-scroll to bottom
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    scrollToBottom();
+
+    // Adjust textarea height
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    // Clear chat
+    clearButton.addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear the chat history?')) {
+            const systemMessage = chatMessages.firstElementChild;
+            chatMessages.innerHTML = '';
+            chatMessages.appendChild(systemMessage);
+        }
+    });
+
+    // Handle form submission
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Add user message to chat
+        const userMessage = document.createElement('div');
+        userMessage.className = 'message user';
+        userMessage.innerHTML = `
+            <div class="message-content">${messageInput.value}</div>
+            <div class="message-time">Just now</div>
+        `;
+        chatMessages.appendChild(userMessage);
+        
+        // Clear input
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        
+        scrollToBottom();
+        
+        // TODO: Send message to backend and handle response
+    });
+});
+</script>
+{% endblock %} 
