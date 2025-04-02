@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from .models import Users
+from django.contrib.auth.hashers import make_password
 
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(max_length=254, required=True)
@@ -24,11 +25,11 @@ class SignUpForm(UserCreationForm):
         user.email = self.cleaned_data['email']
         if commit:
             user.save()
-            # Create record in Users table
+            # Create record in your Users table
             Users.objects.create(
                 name=self.cleaned_data['name'],
                 email=self.cleaned_data['email'],
-                password=user.password  # You should use proper password hashing
+                password=make_password(self.cleaned_data['password1'])  # Hash the password
             )
         return user
 

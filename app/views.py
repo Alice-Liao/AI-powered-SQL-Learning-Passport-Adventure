@@ -12,6 +12,7 @@ from django.contrib import messages
 from .forms import SignUpForm, LoginForm
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
+from django.contrib.auth.hashers import check_password
 
 # Create your views here.
 
@@ -182,13 +183,22 @@ def signup_view(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             try:
+                # Create the user and insert into your database
                 user = form.save()
+                
+                # Create initial progress record (optional)
+                Progress.objects.create(
+                    user_id=Users.objects.get(email=user.email).user_id,
+                    progress_percentage=0
+                )
+                
+                # Log the user in
                 login(request, user)
                 messages.success(request, 'Account created successfully!')
                 return redirect('app-user-page')
             except IntegrityError:
                 messages.error(request, 'This email is already registered.')
-            except ValidationError as e:
+            except Exception as e:
                 messages.error(request, str(e))
         else:
             for field in form:
@@ -213,7 +223,7 @@ def login_view(request):
             try:
                 # Try to find user in your Users table
                 user = Users.objects.get(email=email)
-                if user.password == password:  # You should use proper password hashing
+                if check_password(password, user.password):  # Check hashed password
                     # Create a Django user session
                     django_user = User.objects.get_or_create(
                         username=email,  # Use email as username
