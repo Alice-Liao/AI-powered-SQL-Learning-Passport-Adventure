@@ -139,8 +139,10 @@ def user_page(request):
             query_history = query_history.filter(date__gte=cutoff_date)
             error_history = error_history.filter(date__gte=cutoff_date)
 
-        # Get error counts for each task
-        error_counts = ErrorsRecord.objects.values('task_id').annotate(
+        # Get error counts for each task for the current user
+        error_counts = ErrorsRecord.objects.filter(
+            user_id=user_id  # Only count errors for current user
+        ).values('task_id').annotate(
             error_count=models.Count('error_id')
         )
         
@@ -157,7 +159,7 @@ def user_page(request):
             status_info = status_dict.get(task.tid, {'status': 0, 'date': None})
             task.status = status_info['status']
             task.start_date = status_info['date']
-            task.error_count = error_dict.get(task.tid, 0)
+            task.error_count = error_dict.get(task.tid, 0)  # Get error count for this task
 
         # Apply status filter after annotation
         if selected_statuses:
