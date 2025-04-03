@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Users, Task, QueryHistory, ErrorsRecord, Progress
+from .models import Users, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus
 from django.db import connection
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
@@ -13,6 +13,7 @@ from .forms import SignUpForm, LoginForm
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import check_password
+from django.db import models
 
 # Create your views here.
 
@@ -28,61 +29,35 @@ def testusers(request):
   }
   return render(request, "app/testusers.html", context)
 
-# def user_page(request):
-#     cursor = connection.cursor()
-#     cursor.execute("SELECT * FROM users WHERE id = %s", [user_id])  # Change table name as needed
-#     users = cursor.fetchone()
 
-#     context = {
-#         "users": users
-#     }
-#     return render(request, "app/user_page.html")
-
-# def user_page(request):
-#     try:
-#         # Define the filter options
-#         time_slots = [
-#             ('all', 'All Time'),
-#             ('1', 'Past Day'),
-#             ('3', 'Past 3 Days'),
-#             ('7', 'Past 7 Days'),
-#             ('15', 'Past 15 Days'),
-#             ('30', 'Past 30 Days')
-#         ]
-        
-#         difficulty_levels = [
-#             ('all', 'All Levels'),
-#             ('easy', 'Easy'),
-#             ('medium', 'Medium'),
-#             ('hard', 'Hard')
-#         ]
-        
-#         # For now, just return an empty list of tasks
-#         tasks = []
-        
-#         context = {
-#             'tasks': tasks,
-#             'time_slots': time_slots,
-#             'difficulty_levels': difficulty_levels,
-#         }
-        
-#         # Try the template path without 'app/' prefix since it's in the app templates directory
-#         return render(request, 'DynamicPage/user_page.html', context)
-        
-#     except Exception as e:
-#         if settings.DEBUG:
-#             # In development, show the error
-#             raise e
-#         return render(request, 'app/error.html', {'error': str(e)}, status=500)
 
 @login_required(login_url='login')
 def user_page(request):
     try:
-        # Get the current logged-in user's email and find corresponding Users record
         current_user_email = request.user.email
         user_record = Users.objects.get(email=current_user_email)
         user_id = user_record.user_id
 
+        # Get user's query and error history
+        query_history = QueryHistory.objects.filter(user_id=user_id).order_by('-date')
+        error_history = ErrorsRecord.objects.filter(user_id=user_id).order_by('-date')
+
+        # Get user's progress
+        try:
+            user_progress = Progress.objects.get(user_id=user_id)
+        except Progress.DoesNotExist:
+            user_progress = None
+
+        # Get task statuses for this user
+        task_statuses = TaskStatus.objects.filter(user_id=user_id).select_related('task')
+        
+        # Create a dictionary of task statuses for quick lookup
+        status_dict = {status.task_id: {'status': status.status, 'date': status.date} 
+                      for status in task_statuses}
+
+        # Get all tasks and annotate with status
+        tasks = Task.objects.all().select_related('cid')
+        
         # Define filter options
         time_slots = [
             ('all', 'All Time'),
@@ -95,84 +70,71 @@ def user_page(request):
         
         difficulty_levels = [
             ('all', 'All Levels'),
-            ('easy', 'Easy'),
-            ('medium', 'Medium'),
-            ('hard', 'Hard')
+            (1, 'Easy'),
+            (2, 'Medium'),
+            (3, 'Hard')
         ]
         
         completion_statuses = [
-            ('not_started', 'Not Started'),
-            ('in_progress', 'In Progress'),
-            ('completed', 'Completed'),
-            ('failed', 'Failed')
+            (0, 'Not Started'),
+            (1, 'In Progress'),
+            (2, 'Completed'),
         ]
         
-        query_types = [
-            ('select', 'SELECT'),
-            ('union', 'UNION'),
-            ('join', 'JOIN')
-        ]
-
         # Get filter values from request
         selected_time = request.GET.get('timeSlot', 'all')
         selected_diff = request.GET.get('difficultyLevel', 'all')
         selected_statuses = request.GET.getlist('completionStatus')
         selected_errors = request.GET.get('errorHistory')
-        selected_query_types = request.GET.getlist('queryType')
-
-        # Get user's query history
-        query_history = QueryHistory.objects.filter(user_id=user_id).order_by('-timestamp')
-
-        # Get user's error history
-        error_history = ErrorsRecord.objects.filter(user_id=user_id).order_by('-timestamp')
-
-        # Get user's progress
-        user_progress = Progress.objects.filter(user_id=user_id).first()
-
-        # Get all tasks
-        tasks = Task.objects.all().select_related('queryid')
 
         # Apply filters
         if selected_time != 'all':
             days = int(selected_time)
-            cutoff_date = timezone.now() - timezone.timedelta(days=days)
-            tasks = tasks.filter(time__gte=cutoff_date)
+            cutoff_date = timezone.now().date() - timezone.timedelta(days=days)
+            query_history = query_history.filter(date__gte=cutoff_date)
+            error_history = error_history.filter(date__gte=cutoff_date)
 
+        # Get error counts for each task for the current user
+        error_counts = ErrorsRecord.objects.filter(
+            user_id=user_id  # Only count errors for current user
+        ).values('task_id').annotate(
+            error_count=models.Count('error_id')
+        )
+        
+        # Create error count dictionary for quick lookup
+        error_dict = {item['task_id']: item['error_count'] for item in error_counts}
+
+        # Apply difficulty filter if selected
         if selected_diff != 'all':
-            tasks = tasks.filter(difficulty=selected_diff)
+            tasks = tasks.filter(difficulty=int(selected_diff))
 
-        # Get task completion status for the current user
-        completed_task_ids = set(QueryHistory.objects.filter(
-            user_id=user_id
-        ).values_list('task_id', flat=True).distinct())
-
-        # Prepare task data
-        tasks_list = []
+        # Convert to list and annotate with status and error count
+        tasks = list(tasks)
         for task in tasks:
-            task_data = {
-                'id': task.tid,
-                'name': task.tname,
-                'difficulty': task.difficulty,
-                'status': 'completed' if task.tid in completed_task_ids else 'not_started',
-                'start_date': task.time,
-                'last_updated': query_history.filter(task_id=task.tid).order_by('-timestamp').first(),
-                'query_type': task.queryid.content if task.queryid else '',
-                'errors': error_history.filter(task_id=task.tid).count()
-            }
-            tasks_list.append(task_data)
+            status_info = status_dict.get(task.tid, {'status': 0, 'date': None})
+            task.status = status_info['status']
+            task.start_date = status_info['date']
+            task.error_count = error_dict.get(task.tid, 0)  # Get error count for this task
+
+        # Apply status filter after annotation
+        if selected_statuses:
+            status_values = [int(status) for status in selected_statuses]
+            tasks = [task for task in tasks if task.status in status_values]
+
+        # Apply error filter - show only tasks with errors if selected
+        if selected_errors == 'true':
+            tasks = [task for task in tasks if task.error_count > 0]
 
         context = {
             'user_data': user_record,
-            'query_history': query_history,
-            'error_history': error_history,
+            'query_history': query_history[:5],
+            'error_history': error_history[:5],
             'user_progress': user_progress,
-            'tasks': tasks_list,  # Send the prepared task list
+            'tasks': tasks,
             'time_slots': time_slots,
             'difficulty_levels': difficulty_levels,
             'completion_statuses': completion_statuses,
-            'query_types': query_types,
             'selected_statuses': selected_statuses,
-            'selected_query_types': selected_query_types,
         }
 
         return render(request, 'DynamicPage/user_page.html', context)
@@ -275,3 +237,51 @@ def chat_view(request):
         'chat_history': []  # This will store chat messages
     }
     return render(request, 'app/chat.html', context)
+
+@login_required(login_url='login')
+def task_detail_view(request, task_id):
+    try:
+        # Get current user
+        current_user_email = request.user.email
+        user_record = Users.objects.get(email=current_user_email)
+        user_id = user_record.user_id
+
+        # Get task details
+        task = Task.objects.select_related('cid').get(tid=task_id)
+        
+        # Get task status for this user
+        try:
+            task_status = TaskStatus.objects.get(user_id=user_id, task_id=task_id)
+        except TaskStatus.DoesNotExist:
+            task_status = None
+
+        # Get all queries for this task by this user
+        queries = QueryHistory.objects.filter(
+            user_id=user_id,
+            task_id=task_id
+        ).order_by('-date')
+
+        # Get all errors for this task by this user
+        errors = ErrorsRecord.objects.filter(
+            user_id=user_id,
+            task_id=task_id
+        ).order_by('-date')
+
+        context = {
+            'task': task,
+            'task_status': task_status,
+            'queries': queries,
+            'errors': errors,
+            'user_data': user_record,
+        }
+
+        return render(request, 'DynamicPage/task_detail.html', context)
+
+    except Task.DoesNotExist:
+        messages.error(request, 'Task not found.')
+        return redirect('app-user-page')
+    except Exception as e:
+        if settings.DEBUG:
+            raise e
+        messages.error(request, 'An error occurred while loading the task details.')
+        return redirect('app-user-page')

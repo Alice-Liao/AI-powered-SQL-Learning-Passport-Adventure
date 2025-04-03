@@ -16,12 +16,21 @@ class Admins(models.Model):
         db_table = 'admins'
 
 
+class Countries(models.Model):
+    cid = models.AutoField(primary_key=True)
+    cname = models.CharField(max_length=50)
+
+    class Meta:
+        managed = False
+        db_table = 'countries'
+
+
 class ErrorsRecord(models.Model):
     error_id = models.AutoField(primary_key=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
     task = models.ForeignKey('Task', models.DO_NOTHING, blank=True, null=True)
     error_content = models.CharField(max_length=255, blank=True, null=True)
-    timestamp = models.DateTimeField(blank=True, null=True)
+    date = models.DateField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -53,26 +62,9 @@ class Messages(models.Model):
         db_table = 'messages'
 
 
-class Profile(models.Model):
-    pid = models.AutoField(primary_key=True)
-    llmadvice = models.CharField(max_length=30, blank=True, null=True)
-    userid = models.ForeignKey('Users', models.DO_NOTHING, db_column='userid', blank=True, null=True)
-    progressid = models.ForeignKey('Progress', models.DO_NOTHING, db_column='progressid', blank=True, null=True, related_name='profile_progress')
-
-    class Meta:
-        managed = False
-        db_table = 'profile'
-
-
 class Progress(models.Model):
     progress_id = models.AutoField(primary_key=True)
-    profile = models.ForeignKey(Profile, models.DO_NOTHING, db_column='profile_id', blank=True, null=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
-    latest_advice_from_llm = models.CharField(max_length=255, blank=True, null=True)
-    finished_country = models.CharField(max_length=50, blank=True, null=True)
-    finished_task = models.CharField(max_length=255, blank=True, null=True)
-    unfinish_task = models.CharField(max_length=255, blank=True, null=True)
-    unfinish_country = models.CharField(max_length=50, blank=True, null=True)
     progress_percentage = models.IntegerField(blank=True, null=True)
 
     class Meta:
@@ -80,24 +72,12 @@ class Progress(models.Model):
         db_table = 'progress'
 
 
-class Queries(models.Model):
-    qid = models.AutoField(primary_key=True)
-    content = models.CharField(max_length=255, blank=True, null=True)
-    time = models.DateTimeField(blank=True, null=True)
-    userid = models.ForeignKey('Users', models.DO_NOTHING, db_column='userid', blank=True, null=True)
-    taskid = models.ForeignKey('Task', models.DO_NOTHING, db_column='taskid', blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'queries'
-
-
 class QueryHistory(models.Model):
     query_id = models.AutoField(primary_key=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
     task = models.ForeignKey('Task', models.DO_NOTHING, blank=True, null=True)
     query_content = models.CharField(max_length=255, blank=True, null=True)
-    timestamp = models.DateTimeField(blank=True, null=True)
+    date = models.DateField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -106,16 +86,28 @@ class QueryHistory(models.Model):
 
 class Task(models.Model):
     tid = models.AutoField(primary_key=True)
-    tname = models.CharField(max_length=30, blank=True, null=True)
     difficulty = models.IntegerField(blank=True, null=True)
+    tname = models.CharField(max_length=30, blank=True, null=True)
     time = models.DateField(blank=True, null=True)
-    queryid = models.ForeignKey(Queries, models.DO_NOTHING, db_column='queryid', blank=True, null=True)
     hint = models.CharField(max_length=30, blank=True, null=True)
     description = models.CharField(max_length=30, blank=True, null=True)
+    cid = models.ForeignKey(Countries, models.DO_NOTHING, db_column='cid')
 
     class Meta:
         managed = False
         db_table = 'task'
+
+
+class TaskStatus(models.Model):
+    user = models.OneToOneField('Users', models.DO_NOTHING, primary_key=True)  # The composite primary key (user_id, task_id) found, that is not supported. The first column is selected.
+    task = models.ForeignKey(Task, models.DO_NOTHING)
+    status = models.IntegerField()
+    date = models.DateField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'task_status'
+        unique_together = (('user', 'task'),)
 
 
 class Traveler(models.Model):
@@ -140,10 +132,10 @@ class Users(models.Model):
 
 class Visa(models.Model):
     vid = models.AutoField(primary_key=True)
-    vname = models.CharField(max_length=10, blank=True, null=True)
     ispassed = models.BooleanField(blank=True, null=True)
     issuedate = models.DateField(blank=True, null=True)
     userid = models.ForeignKey(Users, models.DO_NOTHING, db_column='userid', blank=True, null=True)
+    cid = models.ForeignKey(Countries, models.DO_NOTHING, db_column='cid')
 
     class Meta:
         managed = False

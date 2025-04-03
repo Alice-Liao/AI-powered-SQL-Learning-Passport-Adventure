@@ -183,7 +183,6 @@
                     <th>Difficulty</th>
                     <th>Status</th>
                     <th>Date</th>
-                    <th>Query</th>
                     <th>Errors</th>
                     <th>Actions</th>
                 </tr>
@@ -191,19 +190,25 @@
             <tbody>
                 {% for task in tasks %}
                 <tr>
-                    <td>{{ task.id }}</td>
-                    <td>{{ task.name }}</td>
+                    <td>{{ task.tid }}</td>
+                    <td>{{ task.tname }}</td>
                     <td>{{ task.difficulty }}</td>
-                    <td>{{ task.status }}</td>
-                    <td>{{ task.start_date }}</td>
-                    <td>{{ task.last_updated }}</td>
-                    <td>{{ task.query_type }}</td>
-                    <td>{{ task.errors }}</td>
-                    <td><a href="#">View</a></td>
+                    <td>
+                        {% if task.status == 0 %}
+                            Not Started
+                        {% elif task.status == 1 %}
+                            In Progress
+                        {% elif task.status == 2 %}
+                            Completed
+                        {% endif %}
+                    </td>
+                    <td>{{ task.start_date|default:"-" }}</td>
+                    <td>{{ task.error_count }}</td>
+                    <td><a href="{% url 'task-detail' task.tid %}" class="view-btn">View</a></td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9" class="no-data">No tasks found</td>
+                    <td colspan="7" class="no-data">No tasks found</td>
                 </tr>
                 {% endfor %}
             </tbody>
