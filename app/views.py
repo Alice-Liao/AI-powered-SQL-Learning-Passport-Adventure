@@ -282,3 +282,40 @@ def chat_view(request):
         'chat_history': []  # This will store chat messages
     }
     return render(request, 'app/chat.html', context)
+
+########################################################
+# LLM Query
+########################################################
+
+from django.shortcuts import render
+from django.db import connection
+from .llm_utils import generate_sql_from_prompt
+
+def llm_query_view(request):
+    sql = None
+    result = None
+    error = None
+    prompt = ""
+
+    if request.method == "POST":
+        prompt = request.POST.get("question", "")
+        is_admin = request.user.is_staff if request.user.is_authenticated else False
+
+        try:
+            # 调用 LLM 生成 SQL
+            sql = generate_sql_from_prompt(prompt, is_admin=is_admin)
+
+            # 执行 SQL 查询
+            with connection.cursor() as cursor:
+                cursor.execute(sql)
+                result = cursor.fetchall()
+
+        except Exception as e:
+            error = str(e)
+
+    return render(request, 'app/llm_query.html', {
+        'prompt': prompt,
+        'sql': sql,
+        'result': result,
+        'error': error
+    })

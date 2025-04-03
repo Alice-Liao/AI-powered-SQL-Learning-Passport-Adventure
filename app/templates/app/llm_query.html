@@ -1,0 +1,35 @@
+{% extends "app/base.html" %}
+{% block content %}
+
+<h2>Ask SQL in Natural Language</h2>
+
+<form method="post">
+  {% csrf_token %}
+  <input type="text" name="question" placeholder="e.g. Show all solved tasks by student 3" style="width: 60%;" value="{{ prompt }}">
+  <button type="submit">Submit</button>
+</form>
+
+{% if sql %}
+  <h4>Generated SQL:</h4>
+  <pre>{{ sql }}</pre>
+{% endif %}
+
+{% if result %}
+  <h4>Query Result:</h4>
+  <table border="1" cellspacing="0" cellpadding="4">
+    {% for row in result %}
+      <tr>
+        {% for col in row %}
+          <td>{{ col }}</td>
+        {% endfor %}
+      </tr>
+    {% endfor %}
+  </table>
+{% endif %}
+
+{% if error %}
+  <h4 style="color: red;">Error:</h4>
+  <pre>{{ error }}</pre>
+{% endif %}
+
+{% endblock %}
