@@ -29,52 +29,7 @@ def testusers(request):
   }
   return render(request, "app/testusers.html", context)
 
-# def user_page(request):
-#     cursor = connection.cursor()
-#     cursor.execute("SELECT * FROM users WHERE id = %s", [user_id])  # Change table name as needed
-#     users = cursor.fetchone()
 
-#     context = {
-#         "users": users
-#     }
-#     return render(request, "app/user_page.html")
-
-# def user_page(request):
-#     try:
-#         # Define the filter options
-#         time_slots = [
-#             ('all', 'All Time'),
-#             ('1', 'Past Day'),
-#             ('3', 'Past 3 Days'),
-#             ('7', 'Past 7 Days'),
-#             ('15', 'Past 15 Days'),
-#             ('30', 'Past 30 Days')
-#         ]
-        
-#         difficulty_levels = [
-#             ('all', 'All Levels'),
-#             ('easy', 'Easy'),
-#             ('medium', 'Medium'),
-#             ('hard', 'Hard')
-#         ]
-        
-#         # For now, just return an empty list of tasks
-#         tasks = []
-        
-#         context = {
-#             'tasks': tasks,
-#             'time_slots': time_slots,
-#             'difficulty_levels': difficulty_levels,
-#         }
-        
-#         # Try the template path without 'app/' prefix since it's in the app templates directory
-#         return render(request, 'DynamicPage/user_page.html', context)
-        
-#     except Exception as e:
-#         if settings.DEBUG:
-#             # In development, show the error
-#             raise e
-#         return render(request, 'app/error.html', {'error': str(e)}, status=500)
 
 @login_required(login_url='login')
 def user_page(request):
@@ -131,6 +86,7 @@ def user_page(request):
         selected_diff = request.GET.get('difficultyLevel', 'all')
         selected_statuses = request.GET.getlist('completionStatus')
         selected_errors = request.GET.get('errorHistory')
+        task_name_query = request.GET.get('taskName', '').strip()
 
         # Apply filters
         if selected_time != 'all':
@@ -152,6 +108,10 @@ def user_page(request):
         # Apply difficulty filter if selected
         if selected_diff != 'all':
             tasks = tasks.filter(difficulty=int(selected_diff))
+
+        # Apply task name filter if provided
+        if task_name_query:
+            tasks = tasks.filter(tname__icontains=task_name_query)
 
         # Convert to list and annotate with status and error count
         tasks = list(tasks)
@@ -180,6 +140,7 @@ def user_page(request):
             'difficulty_levels': difficulty_levels,
             'completion_statuses': completion_statuses,
             'selected_statuses': selected_statuses,
+            'task_name_query': task_name_query,
         }
 
         return render(request, 'DynamicPage/user_page.html', context)
@@ -282,3 +243,51 @@ def chat_view(request):
         'chat_history': []  # This will store chat messages
     }
     return render(request, 'app/chat.html', context)
+
+@login_required(login_url='login')
+def task_detail_view(request, task_id):
+    try:
+        # Get current user
+        current_user_email = request.user.email
+        user_record = Users.objects.get(email=current_user_email)
+        user_id = user_record.user_id
+
+        # Get task details
+        task = Task.objects.select_related('cid').get(tid=task_id)
+        
+        # Get task status for this user
+        try:
+            task_status = TaskStatus.objects.get(user_id=user_id, task_id=task_id)
+        except TaskStatus.DoesNotExist:
+            task_status = None
+
+        # Get all queries for this task by this user
+        queries = QueryHistory.objects.filter(
+            user_id=user_id,
+            task_id=task_id
+        ).order_by('-date')
+
+        # Get all errors for this task by this user
+        errors = ErrorsRecord.objects.filter(
+            user_id=user_id,
+            task_id=task_id
+        ).order_by('-date')
+
+        context = {
+            'task': task,
+            'task_status': task_status,
+            'queries': queries,
+            'errors': errors,
+            'user_data': user_record,
+        }
+
+        return render(request, 'DynamicPage/task_detail.html', context)
+
+    except Task.DoesNotExist:
+        messages.error(request, 'Task not found.')
+        return redirect('app-user-page')
+    except Exception as e:
+        if settings.DEBUG:
+            raise e
+        messages.error(request, 'An error occurred while loading the task details.')
+        return redirect('app-user-page')

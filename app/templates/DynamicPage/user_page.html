@@ -165,6 +165,19 @@
                 </select>
             </div>
             
+            <!-- Add task name filter -->
+            <div class="filter-group">
+                <label class="filter-header">
+                    <input type="checkbox" id="enableTaskName" class="filter-enable"
+                           {% if request.GET.taskName %}checked{% endif %}>
+                    <h3>Task Name</h3>
+                </label>
+                <input type="text" name="taskName" class="filter-input"
+                       placeholder="Enter task name..."
+                       value="{{ request.GET.taskName }}"
+                       {% if not request.GET.taskName %}disabled{% endif %}>
+            </div>
+
             <div class="filter-actions">
                 <button class="apply-btn" type="submit">Apply Filters</button>
                 <button class="reset-btn" type="reset">Reset Filters</button>
@@ -204,7 +217,7 @@
                     </td>
                     <td>{{ task.start_date|default:"-" }}</td>
                     <td>{{ task.error_count }}</td>
-                    <td><a href="#">View</a></td>
+                    <td><a href="{% url 'task-detail' task.tid %}" class="view-btn">View</a></td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -224,10 +237,24 @@
         // Handle enable/disable filters
         document.querySelectorAll('.filter-enable').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
-                const select = this.closest('.filter-group').querySelector('.filter-select');
-                select.disabled = !this.checked;
-                if (!this.checked) {
-                    select.value = select.multiple ? [] : '';
+                const filterGroup = this.closest('.filter-group');
+                const select = filterGroup.querySelector('.filter-select');
+                const input = filterGroup.querySelector('.filter-input');
+                
+                // Handle select elements
+                if (select) {
+                    select.disabled = !this.checked;
+                    if (!this.checked) {
+                        select.value = select.multiple ? [] : '';
+                    }
+                }
+                
+                // Handle text inputs
+                if (input) {
+                    input.disabled = !this.checked;
+                    if (!this.checked) {
+                        input.value = '';
+                    }
                 }
             });
         });
@@ -235,12 +262,21 @@
         // Handle reset button
         document.querySelector('.reset-btn').addEventListener('click', function(e) {
             e.preventDefault();
-            // Reset all checkboxes and disable selects
+            // Reset all checkboxes and disable inputs/selects
             document.querySelectorAll('.filter-enable').forEach(checkbox => {
                 checkbox.checked = false;
-                const select = checkbox.closest('.filter-group').querySelector('.filter-select');
-                select.disabled = true;
-                select.value = select.multiple ? [] : '';
+                const filterGroup = checkbox.closest('.filter-group');
+                const select = filterGroup.querySelector('.filter-select');
+                const input = filterGroup.querySelector('.filter-input');
+                
+                if (select) {
+                    select.disabled = true;
+                    select.value = select.multiple ? [] : '';
+                }
+                if (input) {
+                    input.disabled = true;
+                    input.value = '';
+                }
             });
             document.querySelector('form').submit();
         });
