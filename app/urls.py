@@ -10,4 +10,5 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
     path('chat/', views.chat_view, name='chat'),
     path('task/<int:task_id>/', views.task_detail_view, name='task-detail'),
+    path('llm/', views.llm_view, name='llm'),
 ]

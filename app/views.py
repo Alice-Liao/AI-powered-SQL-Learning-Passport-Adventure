@@ -14,6 +14,11 @@ from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import check_password
 from django.db import models
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
+import sqlparse
+
 
 # Create your views here.
 
@@ -237,6 +242,140 @@ def chat_view(request):
         'chat_history': []  # This will store chat messages
     }
     return render(request, 'app/chat.html', context)
+
+
+@login_required(login_url='login')
+def llm_view(request):
+    load_dotenv()
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    schema_info = \
+        """
+        1. users(user_id, name, email, password)  
+        2. admins(user_id)
+        3. traveler(user_id, progress_percentage)  
+        4. task(tid, tname, difficulty, time, hint, description, cid)  
+        5. countries(cid, cname)  
+        6. task_status(user_id, task_id, status, date)  
+        7. errors_record(error_id, user_id, task_id, error_content, date)  
+        8. query_history(query_id, user_id, task_id, query_content, date)  
+        9. login_history(login_id, user_id, login_timestamp, logout_timestamp, ip_address, login_status)  
+        10. messages(message_id, sender_id, receiver_id, message_content, timestamp)  
+        11. visa(vid, ispassed, issuedate, userid, cid)
+        12. progress(progress_id, user_id, progress_percentage)
+
+        Table Relationships (foreign keys):
+        1. admins.user_id -> users.user_id
+        2. errors_record.task_id -> task.tid
+        3. errors_record.user_id -> users.user_id
+        4. login_history.user_id -> users.user_id
+        5. messages.sender_id -> users.user_id
+        6. messages.receiver_id -> users.user_id
+        7. progress.user_id -> users.user_id
+        8. query_history.user_id -> users.user_id
+        9. query_history.task_id -> task.tid
+        10. task.cid -> countries.cid
+        11. task_status.user_id -> users.user_id
+        12. task_status.task_id -> task.tid
+        13. traveler.user_id -> users.user_id
+        14. visa.cid -> countries.cid
+        15. visa.userid -> users.user_id
+        """
+
+    if 'chat_history' not in request.session:
+        request.session['chat_history'] = []
+
+    # clean the chat history
+    if request.GET.get('clear') == 'true':
+        request.session['chat_history'] = []
+        return redirect('llm')
+
+    chat_history = request.session['chat_history']
+
+    # get current user
+    current_user_email = request.user.email
+    from app.models import Users
+    user_record = Users.objects.get(email=current_user_email)
+    # is_admin = user_record.admin  
+
+    # system prompt with an additional rule: and user is allowed to ask only SQL-related questions.
+    system_prompt = \
+        f"""
+        You are a PostgreSQL expert assistant. Translate natural language into PostgreSQL queries.
+        If the user's query is not related to SQL, respond with:
+        "❌ Error: Only the SQL-related questions are allowed. Please try again."
+
+        {schema_info}
+
+        RULES:
+        1. Only use the tables and columns defined above.
+        2. Do not return explanations.
+        3. Always return valid SQL only (no markdown or comments).
+        4. For data updates (INSERT/UPDATE), the user may be trying to modify real records.
+        """
+
+    def translate_to_sql(user_input):
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ]
+        )
+        return response.choices[0].message.content.strip()
+
+    if request.method == 'POST':
+        user_input = request.POST.get('message')
+        timestamp = timezone.now().strftime('%Y-%m-%d %H:%M')
+
+        chat_history.append({
+            'is_user': True,
+            'content': user_input,
+            'timestamp': timestamp
+        })
+
+        # get sqll query
+        sql_query = translate_to_sql(user_input)
+
+        result_data = []
+        message = None
+        formatted_sql = sqlparse.format(sql_query, reindent=True)
+
+        if sql_query.startswith("❌ Error:"):
+            message = sql_query
+            formatted_sql = ""
+        else:
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(sql_query)
+
+                    if sql_query.strip().lower().startswith("select"):
+                        columns = [col[0] for col in cursor.description]
+                        rows = cursor.fetchall()
+                        result_data = [dict(zip(columns, row)) for row in rows]
+                        message = f"Returned {len(rows)} rows."
+                    else:
+                        connection.commit()
+                        message = "✅ Query executed successfully."
+
+            except Exception as e:
+                message = f"❌ Error executing SQL: {str(e)}"
+
+        chat_history.append({
+            'is_user': False,
+            'timestamp': timezone.now().strftime('%Y-%m-%d %H:%M'),
+            'content': "",  
+            'sql': formatted_sql,
+            'query_result': result_data,
+            'message': message
+        })
+
+        request.session['chat_history'] = chat_history
+        return redirect('llm')
+
+    return render(request, 'app/llm.html', {'llm_chat_history': chat_history})
+
+
 
 @login_required(login_url='login')
 def task_detail_view(request, task_id):
