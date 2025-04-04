@@ -86,6 +86,7 @@ def user_page(request):
         selected_diff = request.GET.get('difficultyLevel', 'all')
         selected_statuses = request.GET.getlist('completionStatus')
         selected_errors = request.GET.get('errorHistory')
+        task_name_query = request.GET.get('taskName', '').strip()
 
         # Apply filters
         if selected_time != 'all':
@@ -108,6 +109,10 @@ def user_page(request):
         if selected_diff != 'all':
             tasks = tasks.filter(difficulty=int(selected_diff))
 
+        # Apply task name filter if provided
+        if task_name_query:
+            tasks = tasks.filter(tname__icontains=task_name_query)
+
         # Convert to list and annotate with status and error count
         tasks = list(tasks)
         for task in tasks:
@@ -125,6 +130,24 @@ def user_page(request):
         if selected_errors == 'true':
             tasks = [task for task in tasks if task.error_count > 0]
 
+        # Calculate progress percentage
+        total_tasks = Task.objects.count()
+        completed_tasks = TaskStatus.objects.filter(
+            user_id=user_id,
+            status=2  # Completed status
+        ).count()
+        
+        progress_percentage = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+
+        
+        # Update progress in database
+        Progress.objects.update_or_create(
+            user_id=user_id,
+            defaults={
+                'progress_percentage': progress_percentage
+            }
+        )
+
         context = {
             'user_data': user_record,
             'query_history': query_history[:5],
@@ -135,6 +158,10 @@ def user_page(request):
             'difficulty_levels': difficulty_levels,
             'completion_statuses': completion_statuses,
             'selected_statuses': selected_statuses,
+            'task_name_query': task_name_query,
+            'progress_percentage': round(progress_percentage, 1),
+            'completed_tasks': completed_tasks,
+            'total_tasks': total_tasks,
         }
 
         return render(request, 'DynamicPage/user_page.html', context)

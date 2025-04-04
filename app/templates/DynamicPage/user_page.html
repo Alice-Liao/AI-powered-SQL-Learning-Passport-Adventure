@@ -9,9 +9,9 @@
 <div class="container">
     <div class="page-header">
         <h1>Welcome, {{ user_data.name }}!</h1>
-        <div class="header-actions">
+        <!-- <div class="header-actions">
             <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
-        </div>
+        </div> -->
     </div>
 
     {% if messages %}
@@ -27,17 +27,18 @@
     <!-- Progress Section -->
     <div class="progress-section">
         <h2>Your Progress</h2>
-        {% if user_progress %}
-            <div class="progress-bar">
-                <div class="progress" style="width: {{ user_progress.progress_percentage|default:0 }}%">
-                    {{ user_progress.progress_percentage|default:0 }}%
+        <div class="progress-container">
+            <div class="progress-title">
+                <span>Completed {{ completed_tasks }} / {{ total_tasks }} Tasks</span>
+            </div>
+            <div class="progress-bar-outer">
+                <div class="progress-bar-inner" style="width: {{ progress_percentage }}%">
+                    <span class="progress-text">{{ progress_percentage }}%</span>
                 </div>
             </div>
-            <p>Latest Advice: {{ user_progress.latest_advice_from_llm|default:"No advice yet" }}</p>
-            <p>Completed Countries: {{ user_progress.finished_country|default:"None" }}</p>
-        {% else %}
-            <p>No progress data available</p>
-        {% endif %}
+        </div>
+        <!-- <p>Latest Advice: {{ user_progress.latest_advice_from_llm|default:"No advice yet" }}</p>
+        <p>Completed Countries: {{ user_progress.finished_country|default:"None" }}</p> -->
     </div>
 
     <!-- Visa Section -->
@@ -165,6 +166,19 @@
                 </select>
             </div>
             
+            <!-- Add task name filter -->
+            <div class="filter-group">
+                <label class="filter-header">
+                    <input type="checkbox" id="enableTaskName" class="filter-enable"
+                           {% if request.GET.taskName %}checked{% endif %}>
+                    <h3>Task Name</h3>
+                </label>
+                <input type="text" name="taskName" class="filter-input"
+                       placeholder="Enter task name..."
+                       value="{{ request.GET.taskName }}"
+                       {% if not request.GET.taskName %}disabled{% endif %}>
+            </div>
+
             <div class="filter-actions">
                 <button class="apply-btn" type="submit">Apply Filters</button>
                 <button class="reset-btn" type="reset">Reset Filters</button>
@@ -224,10 +238,24 @@
         // Handle enable/disable filters
         document.querySelectorAll('.filter-enable').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
-                const select = this.closest('.filter-group').querySelector('.filter-select');
-                select.disabled = !this.checked;
-                if (!this.checked) {
-                    select.value = select.multiple ? [] : '';
+                const filterGroup = this.closest('.filter-group');
+                const select = filterGroup.querySelector('.filter-select');
+                const input = filterGroup.querySelector('.filter-input');
+                
+                // Handle select elements
+                if (select) {
+                    select.disabled = !this.checked;
+                    if (!this.checked) {
+                        select.value = select.multiple ? [] : '';
+                    }
+                }
+                
+                // Handle text inputs
+                if (input) {
+                    input.disabled = !this.checked;
+                    if (!this.checked) {
+                        input.value = '';
+                    }
                 }
             });
         });
@@ -235,12 +263,21 @@
         // Handle reset button
         document.querySelector('.reset-btn').addEventListener('click', function(e) {
             e.preventDefault();
-            // Reset all checkboxes and disable selects
+            // Reset all checkboxes and disable inputs/selects
             document.querySelectorAll('.filter-enable').forEach(checkbox => {
                 checkbox.checked = false;
-                const select = checkbox.closest('.filter-group').querySelector('.filter-select');
-                select.disabled = true;
-                select.value = select.multiple ? [] : '';
+                const filterGroup = checkbox.closest('.filter-group');
+                const select = filterGroup.querySelector('.filter-select');
+                const input = filterGroup.querySelector('.filter-input');
+                
+                if (select) {
+                    select.disabled = true;
+                    select.value = select.multiple ? [] : '';
+                }
+                if (input) {
+                    input.disabled = true;
+                    input.value = '';
+                }
             });
             document.querySelector('form').submit();
         });

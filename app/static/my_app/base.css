@@ -1280,3 +1280,141 @@ a.deletelink:hover {
     color: var(--body-fg);
     background-color: var(--body-bg);
 }
+
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header styles */
+.main-header {
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding: 15px 0;
+}
+
+.header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Logo styles */
+.logo {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-icon {
+    font-size: 2em;
+}
+
+.logo-text {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #2a5298;
+}
+
+/* Navigation styles */
+.main-nav {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: #2a5298;
+}
+
+/* Navigation buttons */
+.nav-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+
+.btn-login {
+    color: #2a5298 !important;
+    border: 2px solid #2a5298;
+}
+
+.btn-login:hover {
+    background-color: #2a5298;
+    color: white !important;
+}
+
+.btn-signup {
+    background-color: #2a5298;
+    color: white !important;
+}
+
+.btn-signup:hover {
+    background-color: #1e3c72;
+}
+
+.btn-logout {
+    background-color: #dc3545;
+    color: white !important;
+}
+
+.btn-logout:hover {
+    background-color: #c82333;
+}
+
+/* Main content area */
+main {
+    flex: 1;
+    width: 100%;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .nav-links {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nav-btn {
+        width: 100%;
+        text-align: center;
+    }
+}

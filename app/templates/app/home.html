@@ -1,9 +1,92 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title></title>
-  </head>
-  <body>
-    <h1>Blog home!</h1>
-  </body>
-</html>
+{% extends 'app/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'my_app/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>Welcome to SQL Learning Adventure</h1>
+        <p class="hero-subtitle">Learn SQL through an interactive passport adventure</p>
+        {% if not user.is_authenticated %}
+            <div class="cta-buttons">
+                <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+                <a href="{% url 'signup' %}" class="btn btn-secondary">Sign Up</a>
+            </div>
+        {% else %}
+            <div class="cta-buttons">
+                <a href="{% url 'app-user-page' %}" class="btn btn-primary">Go to Dashboard</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="features-section">
+    <h2>Why Choose Our Platform?</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🌍</div>
+            <h3>Global Learning Journey</h3>
+            <p>Travel through different countries while mastering SQL concepts</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <h3>AI-Powered Learning</h3>
+            <p>Get personalized assistance from our AI tutor</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <h3>Progressive Difficulty</h3>
+            <p>Start with basics and advance to complex queries</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Track Progress</h3>
+            <p>Monitor your learning journey with detailed analytics</p>
+        </div>
+    </div>
+</div>
+
+<div class="how-it-works">
+    <h2>How It Works</h2>
+    <div class="steps-container">
+        <div class="step">
+            <div class="step-number">1</div>
+            <h3>Create Account</h3>
+            <p>Sign up and start your SQL learning journey</p>
+        </div>
+        <div class="step">
+            <div class="step-number">2</div>
+            <h3>Choose Your Path</h3>
+            <p>Select countries and complete SQL challenges</p>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <h3>Practice & Learn</h3>
+            <p>Get instant feedback and AI assistance</p>
+        </div>
+        <div class="step">
+            <div class="step-number">4</div>
+            <h3>Earn Visas</h3>
+            <p>Complete challenges to collect country visas</p>
+        </div>
+    </div>
+</div>
+
+<div class="cta-section">
+    <h2>Ready to Start Your Journey?</h2>
+    <p>Join thousands of learners mastering SQL through our unique platform</p>
+    {% if not user.is_authenticated %}
+        <div class="cta-buttons">
+            <a href="{% url 'signup' %}" class="btn btn-primary">Get Started Now</a>
+            <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
+        </div>
+    {% else %}
+        <div class="cta-buttons">
+            <a href="{% url 'app-user-page' %}" class="btn btn-primary">Continue Learning</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

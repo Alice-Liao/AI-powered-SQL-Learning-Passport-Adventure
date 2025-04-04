@@ -9,8 +9,28 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <header>
-        <h1>AI-powered-SQL-Learning-Passport-Adventure</h1>
+    <header class="main-header">
+        <div class="header-container">
+            <div class="logo-section">
+                <a href="{% url 'app-home' %}" class="logo">
+                    <span class="logo-icon">🌍</span>
+                    <span class="logo-text">SQL Adventure</span>
+                </a>
+            </div>
+            <nav class="main-nav">
+                <ul class="nav-links">
+                    <li><a href="{% url 'app-home' %}">Home</a></li>
+                    {% if user.is_authenticated %}
+                        <li><a href="{% url 'app-user-page' %}">Dashboard</a></li>
+                        <li><a href="{% url 'chat' %}">AI Chat</a></li>
+                        <li><a href="{% url 'logout' %}" class="nav-btn btn-logout">Logout</a></li>
+                    {% else %}
+                        <li><a href="{% url 'login' %}" class="nav-btn btn-login">Login</a></li>
+                        <li><a href="{% url 'signup' %}" class="nav-btn btn-signup">Sign Up</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
     </header>
     <main>
         {% block content %}{% endblock %}
