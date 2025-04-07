@@ -8,7 +8,7 @@
 {% block content %}
 <div class="auth-container">
     <div class="auth-box">
-        <h2>Sign Up</h2>
+        <h2>{% if instructor %}Instructor{% else %}Student{% endif %} Sign Up</h2>
         
         {% if messages %}
         <div class="messages">
@@ -61,8 +61,13 @@
         </form>
         
         <div class="auth-links">
+            {% if instructor %}
+                <p>Want to register as a Student? <a href="{% url 'signup' %}">Click here</a></p>
+            {% else %}
+                <p>Want to register as an Instructor? <a href="{% url 'instructor_signup' %}">Click here</a></p>
+            {% endif %}
             <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
         </div>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

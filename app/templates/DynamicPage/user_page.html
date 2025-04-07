@@ -10,7 +10,10 @@
     <div class="page-header">
         <h1>Welcome, {{ user_data.name }}!</h1>
         <div class="header-actions">
-            <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
+            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
         </div>
     </div>
 
