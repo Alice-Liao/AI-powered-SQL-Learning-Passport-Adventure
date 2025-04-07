@@ -255,6 +255,45 @@ def task_detail_view(request, task_id):
         # Get task details
         task = Task.objects.select_related('cid').get(tid=task_id)
         
+        # Handle SQL query submission
+        query_result = None
+        if request.method == 'POST':
+            sql_query = request.POST.get('sql_query')
+            if sql_query:
+                try:
+                    # Execute the query
+                    with connection.cursor() as cursor:
+                        cursor.execute(sql_query)
+                        rows = cursor.fetchall()
+                        
+                        # Get column names
+                        columns = [col[0] for col in cursor.description]
+                        
+                        # Format the result
+                        result_lines = [' | '.join(columns)]  # Header
+                        result_lines.append('-' * len(result_lines[0]))  # Separator
+                        for row in rows:
+                            result_lines.append(' | '.join(str(cell) for cell in row))
+                        query_result = '\n'.join(result_lines)
+
+                        # Save to query history
+                        QueryHistory.objects.create(
+                            user_id=user_id,
+                            task_id=task_id,
+                            query_content=sql_query,
+                            date=timezone.now()
+                        )
+
+                except Exception as e:
+                    # Save to error history
+                    ErrorsRecord.objects.create(
+                        user_id=user_id,
+                        task_id=task_id,
+                        error_content=str(e),
+                        date=timezone.now()
+                    )
+                    messages.error(request, f'Query error: {str(e)}')
+
         # Get task status for this user
         try:
             task_status = TaskStatus.objects.get(user_id=user_id, task_id=task_id)
@@ -279,6 +318,7 @@ def task_detail_view(request, task_id):
             'queries': queries,
             'errors': errors,
             'user_data': user_record,
+            'query_result': query_result,
         }
 
         return render(request, 'DynamicPage/task_detail.html', context)

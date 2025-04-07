@@ -1,100 +1,111 @@
-{% extends 'app/base.html' %}
-{% load static %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'my_app/task_detail.css' %}">
-{% endblock %}
-
-{% block content %}
+{% extends 'app/base.html' %} {% load static %} {% block extra_css %}
+<link rel="stylesheet" href="{% static 'my_app/task_detail.css' %}" />
+{% endblock %} {% block content %}
 <div class="container">
-    <div class="page-header">
-        <h1>Task Details</h1>
-        <a href="{% url 'app-user-page' %}" class="back-btn">Back to Tasks</a>
-    </div>
+  <div class="page-header">
+    <h1>Task Details</h1>
+    <a href="{% url 'app-user-page' %}" class="back-btn">Back to Tasks</a>
+  </div>
 
-    {% if messages %}
-    <div class="messages">
-        {% for message in messages %}
-        <div class="message {{ message.tags }}">{{ message }}</div>
-        {% endfor %}
+  {% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+    <div class="message {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Add SQL Query Input Section -->
+  <div class="query-input-section">
+    <form method="post" class="query-form">
+      {% csrf_token %}
+      <div class="query-input-container">
+        <label for="sql-query">Enter your SQL query:</label>
+        <textarea
+          id="sql-query"
+          name="sql_query"
+          class="sql-input"
+          placeholder="SELECT * FROM table_name;"
+          rows="4"
+        ></textarea>
+        <button type="submit" class="run-query-btn">Run Query</button>
+      </div>
+      {% if query_result %}
+      <div class="query-result">
+        <h3>Query Result:</h3>
+        <pre>{{ query_result }}</pre>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="task-info">
+    <h2>{{ task.tname }}</h2>
+    <div class="task-meta">
+      <div class="meta-item">
+        <label>Task ID:</label>
+        <span>{{ task.tid }}</span>
+      </div>
+      <div class="meta-item">
+        <label>Difficulty:</label>
+        <span class="difficulty-badge difficulty-{{ task.difficulty }}">
+          {% if task.difficulty == 1 %}Easy {% elif task.difficulty == 2
+          %}Medium {% elif task.difficulty == 3 %}Hard {% endif %}
+        </span>
+      </div>
+      <div class="meta-item">
+        <label>Country:</label>
+        <span>{{ task.cid.cname }}</span>
+      </div>
+      <div class="meta-item">
+        <label>Status:</label>
+        <span class="status-badge status-{{ task_status.status|default:0 }}">
+          {% if task_status.status == 0 %}Not Started {% elif task_status.status
+          == 1 %}In Progress {% elif task_status.status == 2 %}Completed {% else
+          %}Not Started {% endif %}
+        </span>
+      </div>
+    </div>
+    <div class="task-description">
+      <h3>Description</h3>
+      <p>{{ task.description|default:"No description available" }}</p>
+    </div>
+    {% if task.hint %}
+    <div class="task-hint">
+      <h3>Hint</h3>
+      <p>{{ task.hint }}</p>
     </div>
     {% endif %}
+  </div>
 
-    <div class="task-info">
-        <h2>{{ task.tname }}</h2>
-        <div class="task-meta">
-            <div class="meta-item">
-                <label>Task ID:</label>
-                <span>{{ task.tid }}</span>
-            </div>
-            <div class="meta-item">
-                <label>Difficulty:</label>
-                <span class="difficulty-badge difficulty-{{ task.difficulty }}">
-                    {% if task.difficulty == 1 %}Easy
-                    {% elif task.difficulty == 2 %}Medium
-                    {% elif task.difficulty == 3 %}Hard
-                    {% endif %}
-                </span>
-            </div>
-            <div class="meta-item">
-                <label>Country:</label>
-                <span>{{ task.cid.cname }}</span>
-            </div>
-            <div class="meta-item">
-                <label>Status:</label>
-                <span class="status-badge status-{{ task_status.status|default:0 }}">
-                    {% if task_status.status == 0 %}Not Started
-                    {% elif task_status.status == 1 %}In Progress
-                    {% elif task_status.status == 2 %}Completed
-                    {% else %}Not Started
-                    {% endif %}
-                </span>
-            </div>
+  <div class="history-section">
+    <div class="query-history">
+      <h2>Query History</h2>
+      {% if queries %} {% for query in queries %}
+      <div class="query-item">
+        <div class="query-meta">
+          <span class="query-date">{{ query.date|date:"Y-m-d" }}</span>
         </div>
-        <div class="task-description">
-            <h3>Description</h3>
-            <p>{{ task.description|default:"No description available" }}</p>
-        </div>
-        {% if task.hint %}
-        <div class="task-hint">
-            <h3>Hint</h3>
-            <p>{{ task.hint }}</p>
-        </div>
-        {% endif %}
+        <pre class="query-content">{{ query.query_content }}</pre>
+      </div>
+      {% endfor %} {% else %}
+      <p class="no-data">No queries yet</p>
+      {% endif %}
     </div>
 
-    <div class="history-section">
-        <div class="query-history">
-            <h2>Query History</h2>
-            {% if queries %}
-                {% for query in queries %}
-                <div class="query-item">
-                    <div class="query-meta">
-                        <span class="query-date">{{ query.date|date:"Y-m-d" }}</span>
-                    </div>
-                    <pre class="query-content">{{ query.query_content }}</pre>
-                </div>
-                {% endfor %}
-            {% else %}
-                <p class="no-data">No queries yet</p>
-            {% endif %}
+    <div class="error-history">
+      <h2>Error History</h2>
+      {% if errors %} {% for error in errors %}
+      <div class="error-item">
+        <div class="error-meta">
+          <span class="error-date">{{ error.date|date:"Y-m-d" }}</span>
         </div>
-
-        <div class="error-history">
-            <h2>Error History</h2>
-            {% if errors %}
-                {% for error in errors %}
-                <div class="error-item">
-                    <div class="error-meta">
-                        <span class="error-date">{{ error.date|date:"Y-m-d" }}</span>
-                    </div>
-                    <div class="error-content">{{ error.error_content }}</div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <p class="no-data">No errors recorded</p>
-            {% endif %}
-        </div>
+        <div class="error-content">{{ error.error_content }}</div>
+      </div>
+      {% endfor %} {% else %}
+      <p class="no-data">No errors recorded</p>
+      {% endif %}
     </div>
+  </div>
 </div>
-{% endblock %} 
+{% endblock %}
