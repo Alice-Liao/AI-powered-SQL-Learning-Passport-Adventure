@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Users, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus
+from .models import Users, Admins, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus
 from django.db import connection
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
@@ -9,7 +9,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from .forms import SignUpForm, LoginForm
+from .forms import SignUpForm, LoginForm, InstructorSignUpForm
 from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import check_password
@@ -19,16 +19,6 @@ from django.db import models
 
 def home(request):
   return render(request, "app/home.html")
-
-def testusers(request):
-  cursor = connection.cursor()
-  cursor.execute("SELECT * FROM users")
-  rows = cursor.fetchall()
-  context = {
-    "data": rows
-  }
-  return render(request, "app/testusers.html", context)
-
 
 
 @login_required(login_url='login')
@@ -209,6 +199,37 @@ def signup_view(request):
     
     return render(request, 'app/signup.html', {'form': form})
 
+
+def instructor_signup_view(request):
+    if request.user.is_authenticated:
+        return redirect('app-user-page')
+
+    if request.method == 'POST':
+        form = InstructorSignUpForm(request.POST)
+        if form.is_valid():
+            try:
+                user = form.save()
+                db_user = Users.objects.get(email=user.email)
+                Admins.objects.create(user=db_user)
+                login(request, user)
+                messages.success(request, 'Instructor account created successfully!')
+                return redirect('app-user-page')
+            except IntegrityError:
+                messages.error(request, 'This email is already registered.')
+                return render(request, 'app/signup.html', {'form': form, 'instructor': True})
+            except Exception as e:
+                messages.error(request, str(e))
+                return render(request, 'app/signup.html', {'form': form, 'instructor': True})
+        else:
+            for field in form:
+                for error in field.errors:
+                    messages.error(request, f"{field.label}: {error}")
+            return render(request, 'app/signup.html', {'form': form, 'instructor': True})
+    else:
+        form = InstructorSignUpForm()
+
+    return render(request, 'app/signup.html', {'form': form, 'instructor': True})
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('app-user-page')
@@ -221,12 +242,11 @@ def login_view(request):
             remember_me = form.cleaned_data.get('remember_me')
             
             try:
-                # Try to find user in your Users table
                 user = Users.objects.get(email=email)
-                if check_password(password, user.password):  # Check hashed password
+                if check_password(password, user.password):
                     # Create a Django user session
                     django_user = User.objects.get_or_create(
-                        username=email,  # Use email as username
+                        username=email,
                         email=email,
                         defaults={'first_name': user.name}
                     )[0]
@@ -312,3 +332,113 @@ def task_detail_view(request, task_id):
             raise e
         messages.error(request, 'An error occurred while loading the task details.')
         return redirect('app-user-page')
+
+########################################################
+# chat bot
+########################################################
+from django.shortcuts import render
+from django.db import connection
+from datetime import datetime
+from .llm_utils import generate_sql_from_prompt
+from .models import Admins
+from django.contrib.auth.decorators import login_required
+
+@login_required(login_url='login')
+def chat_view(request):
+    chat_history = []
+    
+    try:
+        # Get the current user's email and Users instance
+        current_user = request.user
+        db_user = Users.objects.get(email=current_user.email)
+        
+        # Determine if the user is an instructor
+        is_admin = Admins.objects.filter(user=db_user).exists()
+        role = "Instructor" if is_admin else "Student"
+
+        if request.method == "POST":
+            prompt = request.POST.get("message", "").strip()
+            if prompt:
+                # Add user message to chat history
+                chat_history.append({
+                    "content": prompt,
+                    "is_user": True,
+                    "timestamp": datetime.now().strftime("%I:%M %p")
+                })
+
+                try:
+                    # Generate and execute SQL
+                    sql = generate_sql_from_prompt(prompt, is_admin=is_admin)
+                    
+                    with connection.cursor() as cursor:
+                        cursor.execute(sql)
+                        if sql.strip().lower().startswith("select"):
+                            rows = cursor.fetchall()
+                            formatted = "\n".join([str(row) for row in rows]) or "No results."
+                        else:
+                            formatted = "✅ SQL executed successfully."
+
+                    # Add response to chat history
+                    chat_history.append({
+                        "content": f"SQL:\n{sql}\n\nResult:\n{formatted}",
+                        "is_user": False,
+                        "timestamp": datetime.now().strftime("%I:%M %p")
+                    })
+
+                except Exception as e:
+                    # Add error message to chat history
+                    chat_history.append({
+                        "content": f"❌ Error: {str(e)}",
+                        "is_user": False,
+                        "timestamp": datetime.now().strftime("%I:%M %p")
+                    })
+
+        return render(request, 'app/chat.html', {
+            "chat_history": chat_history,
+            "role": role
+        })
+
+    except Users.DoesNotExist:
+        messages.error(request, "User profile not found.")
+        return redirect("login")
+    except Exception as e:
+        messages.error(request, str(e))
+        return render(request, 'app/chat.html', {
+            "chat_history": chat_history,
+            "error": str(e)
+        })
+
+########################################################
+# LLM Query
+########################################################
+
+from django.shortcuts import render
+from django.db import connection
+from .llm_utils import generate_sql_from_prompt
+
+def llm_query_view(request):
+    sql = None
+    result = None
+    error = None
+    prompt = ""
+
+    if request.method == "POST":
+        prompt = request.POST.get("question", "")
+        is_admin = request.user.is_staff if request.user.is_authenticated else False
+
+        try:
+            sql = generate_sql_from_prompt(prompt, is_admin=is_admin)
+
+            with connection.cursor() as cursor:
+                cursor.execute(sql)
+                result = cursor.fetchall()
+
+        except Exception as e:
+            error = str(e)
+
+    return render(request, 'app/llm_query.html', {
+        'prompt': prompt,
+        'sql': sql,
+        'result': result,
+        'error': error
+    })

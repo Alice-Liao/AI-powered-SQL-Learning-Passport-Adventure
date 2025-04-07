@@ -4,8 +4,9 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from .models import Users
 from django.contrib.auth.hashers import make_password
+from .models import Admins
 
-class SignUpForm(UserCreationForm):
+class BaseSignUpForm(UserCreationForm):
     email = forms.EmailField(max_length=254, required=True)
     name = forms.CharField(max_length=30, required=True)
     
@@ -31,6 +32,16 @@ class SignUpForm(UserCreationForm):
                 email=self.cleaned_data['email'],
                 password=make_password(self.cleaned_data['password1'])  # Hash the password
             )
+        return user
+
+class SignUpForm(BaseSignUpForm):
+    pass
+
+class InstructorSignUpForm(BaseSignUpForm):
+    def save(self, commit=True):
+        user = super().save(commit)
+        db_user = Users.objects.get(email=user.email)
+        Admins.objects.create(user=db_user)
         return user
 
 class LoginForm(forms.Form):
