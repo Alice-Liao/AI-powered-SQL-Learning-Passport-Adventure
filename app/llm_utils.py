@@ -12,8 +12,7 @@ You are a helpful assistant that translates English into PostgreSQL SQL queries.
 
 The database has the following tables and relationships:
 
-users(user_id, name, email, password)  
-admins(user_id) — one-to-one link to users  
+
 traveler(user_id, progress_percentage)  
 task(tid, tname, difficulty, time, hint, description, cid)  
 countries(cid, cname)  
@@ -23,6 +22,24 @@ query_history(query_id, user_id, task_id, query_content, date)
 login_history(login_id, user_id, login_timestamp, logout_timestamp, ip_address, login_status)  
 messages(message_id, sender, receiver, message_content, timestamp)  
 visa(vid, ispassed, issuedate, userid, cid)
+progress(progress_id, user_id, progress_percentage)
+
+Table Relationships (foreign keys)
+admins.user_id -> users.user_id
+errors_record.task_id -> task.tid
+errors_record.user_id -> users.user_id
+login_history.user_id -> users.user_id
+messages.sender_id -> users.user_id
+messages.receiver_id -> users.user_id
+progress.user_id -> users.user_id
+query_history.user_id -> users.user_id
+query_history.task_id -> task.tid
+task.cid -> countries.cid
+task_status.user_id -> users.user_id
+task_status.task_id -> task.tid
+traveler.user_id -> users.user_id
+visa.cid -> countries.cid
+visa.userid -> users.user_id
 
 Guidelines:
 - Only return a single SQL statement. No explanation.
