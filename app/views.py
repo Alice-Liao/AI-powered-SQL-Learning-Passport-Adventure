@@ -346,20 +346,20 @@ from django.contrib.auth.decorators import login_required
 @login_required(login_url='login')
 def chat_view(request):
     chat_history = []
-    
+
     try:
-        # Get the current user's email and Users instance
+        # 获取当前用户信息
         current_user = request.user
         db_user = Users.objects.get(email=current_user.email)
-        
-        # Determine if the user is an instructor
+
+        # 判断是否为 Instructor
         is_admin = Admins.objects.filter(user=db_user).exists()
         role = "Instructor" if is_admin else "Student"
 
         if request.method == "POST":
             prompt = request.POST.get("message", "").strip()
             if prompt:
-                # Add user message to chat history
+                # 加入用户发言到聊天记录
                 chat_history.append({
                     "content": prompt,
                     "is_user": True,
@@ -367,26 +367,17 @@ def chat_view(request):
                 })
 
                 try:
-                    # Generate and execute SQL
-                    sql = generate_sql_from_prompt(prompt, is_admin=is_admin)
-                    
-                    with connection.cursor() as cursor:
-                        cursor.execute(sql)
-                        if sql.strip().lower().startswith("select"):
-                            rows = cursor.fetchall()
-                            formatted = "\n".join([str(row) for row in rows]) or "No results."
-                        else:
-                            formatted = "✅ SQL executed successfully."
+                    # ✅ 使用 LLM 生成 SQL 并执行，返回格式化结果
+                    response_text = generate_sql_from_prompt(prompt, is_admin=is_admin)
 
-                    # Add response to chat history
+                    # 加入 AI 回复到聊天记录
                     chat_history.append({
-                        "content": f"SQL:\n{sql}\n\nResult:\n{formatted}",
+                        "content": response_text,
                         "is_user": False,
                         "timestamp": datetime.now().strftime("%I:%M %p")
                     })
 
                 except Exception as e:
-                    # Add error message to chat history
                     chat_history.append({
                         "content": f"❌ Error: {str(e)}",
                         "is_user": False,
@@ -401,12 +392,14 @@ def chat_view(request):
     except Users.DoesNotExist:
         messages.error(request, "User profile not found.")
         return redirect("login")
+
     except Exception as e:
         messages.error(request, str(e))
         return render(request, 'app/chat.html', {
             "chat_history": chat_history,
             "error": str(e)
         })
+
 
 ########################################################
 # LLM Query
