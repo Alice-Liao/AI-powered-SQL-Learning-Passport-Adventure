@@ -1,0 +1,203 @@
+.container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+.page-header {
+    margin-bottom: 30px;
+}
+
+.tasks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.task-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.task-header {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.tag {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+}
+
+.country {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.difficulty-1 {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.difficulty-2 {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.difficulty-3 {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.task-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.status-0 {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+.status-1 {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.status-2 {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.task-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.action-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+.play-btn {
+    background-color: #4CAF50;
+    color: white !important;
+}
+
+.play-btn:hover {
+    background-color: #45a049;
+}
+
+.view-btn {
+    background-color: #2196F3;
+    color: white !important;
+}
+
+.view-btn:hover {
+    background-color: #1976D2;
+}
+
+.no-tasks {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.countries-container {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.country-section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.country-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 30px;
+    color: #2a5298;
+    font-size: 1.8em;
+}
+
+.country-icon {
+    font-size: 1.2em;
+}
+
+.difficulty-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.difficulty-section {
+    border-left: 4px solid;
+    padding-left: 20px;
+}
+
+.difficulty-section:nth-child(1) {
+    border-color: #4caf50;
+}
+
+.difficulty-section:nth-child(2) {
+    border-color: #ff9800;
+}
+
+.difficulty-section:nth-child(3) {
+    border-color: #f44336;
+}
+
+.difficulty-title {
+    margin-bottom: 20px;
+    color: #666;
+}
+
+.locked {
+    opacity: 0.7;
+    position: relative;
+}
+
+.locked::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    z-index: 1;
+}
+
+.locked-message {
+    color: #666;
+    text-align: center;
+    font-weight: 500;
+}
+
+.subtitle {
+    color: #666;
+    margin-top: 10px;
+    font-size: 1.1em;
+}

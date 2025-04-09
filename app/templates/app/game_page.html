@@ -1,0 +1,240 @@
+{% extends 'app/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'my_app/game_page.css' %}" type="text/css">
+{% endblock %}
+
+{% block content %}
+<div class="game-container">
+    <!-- Left Panel: Question Area -->
+    <div class="left-panel">
+        <div class="question-section">
+            <div class="tags">
+                <span class="tag country">{{ task.cid.cname }}</span>
+                <span class="tag difficulty-{{ task.difficulty }}">
+                    {% if task.difficulty == 1 %}Easy
+                    {% elif task.difficulty == 2 %}Medium
+                    {% elif task.difficulty == 3 %}Hard
+                    {% endif %}
+                </span>
+            </div>
+            <h2>{{ task.tname }}</h2>
+            <p class="description">{{ task.description }}</p>
+            
+            <!-- Expected Columns -->
+            <div class="expected-columns">
+                <p class="hint-text">Please include these columns in your query:</p>
+                <div class="column-tags">
+                    {% for column in expected_columns %}
+                        <span class="column-tag">{{ column }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Example Table -->
+            <div class="example-table">
+                <h3>Table Data</h3>
+                <p>Country: {{ task.cid.cname }}</p>
+                <p class="table-name">
+                    {% if task_type == 1 %}
+                        Table Name: <span class="highlight">places</span>
+                    {% elif task_type == 2 %}
+                        Table Name: <span class="highlight">food</span>
+                    {% elif task_type == 3 %}
+                        Table Name: <span class="highlight">events</span>
+                    {% endif %}
+                </p>
+                
+                {% if task_type == 1 %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>City</th>
+                                <th>Category</th>
+                                <th>Visitors/Year</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for place in example_data %}
+                            <tr>
+                                <td>{{ place.name }}</td>
+                                <td>{{ place.city }}</td>
+                                <td>{{ place.category }}</td>
+                                <td>{{ place.visitors_per_year }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% elif task_type == 2 %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for food in example_data %}
+                            <tr>
+                                <td>{{ food.name }}</td>
+                                <td>{{ food.type }}</td>
+                                <td>${{ food.price }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% elif task_type == 3 %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Month</th>
+                                <th>City</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in example_data %}
+                            <tr>
+                                <td>{{ event.name }}</td>
+                                <td>{{ event.month }}</td>
+                                <td>{{ event.city }}</td>
+                                <td>{{ event.description }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p>No matching task type found (task_type: {{ task_type }})</p>
+                {% endif %}
+                
+                {% if not example_data %}
+                    <p>No data available for this country</p>
+                {% endif %}
+            </div>
+
+            <!-- Hints Section -->
+            <div class="hints-section">
+                <button id="showHint" class="hint-btn">Need a Hint?</button>
+                <div id="hintContent" class="hint-content hidden">
+                    {{ task.hint }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+        <!-- Top: Coding Area -->
+        <div class="coding-section">
+            <div class="editor-container">
+                <textarea id="queryInput" placeholder="Write your SQL query here..."></textarea>
+                <button id="submitQuery" class="submit-btn">Run Query</button>
+            </div>
+        </div>
+
+        <!-- Bottom: Result Area -->
+        <div class="result-section">
+            <div id="resultStatus" class="hidden"></div>
+            <div class="result-table-header">Query Result:</div>
+            <div id="resultTable" class="result-table"></div>
+            <div id="errorMessage" class="error-message hidden"></div>
+            <div id="compareResult" class="compare-result hidden">
+                <p>Your query result matches the expected result!</p>
+                <button id="submitButton" class="submit-btn">Submit and Continue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle hint button
+    document.getElementById('showHint').addEventListener('click', function() {
+        const hintContent = document.getElementById('hintContent');
+        const isHidden = hintContent.classList.contains('hidden');
+        
+        if (isHidden) {
+            hintContent.classList.remove('hidden');
+            this.textContent = 'Hide Hint';
+        } else {
+            hintContent.classList.add('hidden');
+            this.textContent = 'Need a Hint?';
+        }
+    });
+
+    // Handle query submission
+    document.getElementById('submitQuery').addEventListener('click', function() {
+        const query = document.getElementById('queryInput').value;
+        
+        fetch('{% url "execute-query" task.tid %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: 'query=' + encodeURIComponent(query)
+        })
+        .then(response => response.json())
+        .then(data => {
+            const resultStatus = document.getElementById('resultStatus');
+            const resultTable = document.getElementById('resultTable');
+            const errorMessage = document.getElementById('errorMessage');
+            const compareResult = document.getElementById('compareResult');
+
+            resultStatus.classList.remove('hidden');
+            if (data.success) {
+                resultStatus.className = 'success';
+                resultStatus.textContent = 'Query executed successfully!';
+                
+                // Create result table
+                let tableHTML = '<table><thead><tr>';
+                if (data.result.length > 0) {
+                    Object.keys(data.result[0]).forEach(key => {
+                        tableHTML += `<th>${key}</th>`;
+                    });
+                    tableHTML += '</tr></thead><tbody>';
+                    data.result.forEach(row => {
+                        tableHTML += '<tr>';
+                        Object.values(row).forEach(value => {
+                            tableHTML += `<td>${value}</td>`;
+                        });
+                        tableHTML += '</tr>';
+                    });
+                    tableHTML += '</tbody></table>';
+                    resultTable.innerHTML = tableHTML;
+                }
+                errorMessage.classList.add('hidden');
+                
+                // Show compare result and submit button if results match
+                compareResult.classList.remove('hidden');
+            } else {
+                resultStatus.className = 'error';
+                resultStatus.textContent = 'Error in query';
+                errorMessage.textContent = data.error;
+                errorMessage.classList.remove('hidden');
+                resultTable.innerHTML = '';
+                compareResult.classList.remove('hidden');  // Show submit button even on error
+                compareResult.innerHTML = `
+                    <p style="color: #c62828;">Your query has errors, but you can still submit and try again later.</p>
+                    <button id="submitButton" class="submit-btn">Submit and Continue</button>
+                `;
+            }
+
+            // Add redirect functionality for both success and error cases
+            if (data.redirect) {
+                document.getElementById('submitButton').addEventListener('click', function() {
+                    window.location.href = data.redirect;
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+});
+</script>
+{% endblock %}
