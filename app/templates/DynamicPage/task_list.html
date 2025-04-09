@@ -1,0 +1,83 @@
+{% extends 'app/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'my_app/task_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>SQL Adventure Map</h1>
+        <p class="subtitle">Complete easier tasks to unlock more challenging ones!</p>
+    </div>
+
+    <div class="countries-container">
+        {% for country_data in country_tasks %}
+        <div class="country-section">
+            <h2 class="country-title">
+                <span class="country-icon">🌍</span>
+                {{ country_data.country.cname }}
+            </h2>
+            
+            <div class="difficulty-sections">
+                {% regroup country_data.tasks by difficulty as difficulty_list %}
+                {% for difficulty in difficulty_list %}
+                <div class="difficulty-section">
+                    <h3 class="difficulty-title">
+                        {% if difficulty.grouper == 1 %}
+                            Easy
+                        {% elif difficulty.grouper == 2 %}
+                            Medium
+                        {% else %}
+                            Hard
+                        {% endif %}
+                    </h3>
+                    
+                    <div class="tasks-grid">
+                        {% for task in difficulty.list %}
+                        <div class="task-card {% if task.is_locked %}locked{% endif %}">
+                            <div class="task-header">
+                                <span class="tag difficulty-{{ task.difficulty }}">
+                                    {% if task.difficulty == 1 %}Easy
+                                    {% elif task.difficulty == 2 %}Medium
+                                    {% elif task.difficulty == 3 %}Hard
+                                    {% endif %}
+                                </span>
+                                <span class="status-badge status-{{ task.status }}">
+                                    {% if task.has_attempts %}
+                                        In Progress
+                                    {% elif task.status == 2 %}
+                                        Completed
+                                    {% else %}
+                                        Not Started
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <h3>{{ task.tname }}</h3>
+                            <p>{{ task.description|truncatechars:100 }}</p>
+                            
+                            <div class="task-footer">
+                                {% if task.is_locked %}
+                                    <div class="locked-message">
+                                        🔒 Complete easier tasks to unlock
+                                    </div>
+                                {% else %}
+                                    <div class="task-actions">
+                                        <a href="{% url 'game_page' task.tid %}" class="action-btn play-btn">Play</a>
+                                        <a href="{% url 'task-detail' task.tid %}" class="action-btn view-btn">View</a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

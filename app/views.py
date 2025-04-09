@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Users, Admins, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus
+from .models import Users, Admins, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus, Countries, Places, Food, Events
 from django.db import connection
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
@@ -14,6 +14,9 @@ from django.db import IntegrityError
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import check_password
 from django.db import models
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from decimal import Decimal
 
 # Create your views here.
 
@@ -442,3 +445,235 @@ def llm_query_view(request):
         'result': result,
         'error': error
     })
+
+    ##################################
+    # Game Section
+    ##################################
+
+import json
+import time
+import psycopg2  # PostgreSQL client (use psycopg2 instead of mysql.connector for PostgreSQL)
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Task  # Import Task model which has the expected_result
+
+def question_detail(request, question_id):
+    question = get_object_or_404(Task, id=question_id)
+    hints = question.hints.all()
+    
+    context = {
+        'question': question.tname,
+        'description': question.description,
+        'expected_result': json.loads(question.expected_result),
+        'difficulty': question.difficulty,
+        'hint': question.hint,
+    }
+    
+    return render(request, 'coding_game/game_page.html', context)
+
+@login_required(login_url='login')
+def execute_query(request, task_id):
+    if request.method == 'POST':
+        query = request.POST.get('query', '')
+        try:
+            # Get the task and its country
+            task = Task.objects.select_related('cid').get(tid=task_id)
+            country_id = task.cid.cid
+            current_user = Users.objects.get(email=request.user.email)
+            
+            # Modify query to include country filter
+            if 'WHERE' in query.upper():
+                query = query.replace('WHERE', f'WHERE country_id = {country_id} AND')
+            else:
+                query = query + f' WHERE country_id = {country_id}'
+            
+            print(f"Modified query: {query}")
+            
+            # Record query history regardless of success
+            QueryHistory.objects.create(
+                user_id=current_user.user_id,
+                task_id=task_id,
+                query_content=query,
+                date=timezone.now()
+            )
+            
+            # Execute query safely
+            with connection.cursor() as cursor:
+                cursor.execute(query)
+                columns = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                # Convert Decimal to float
+                result = []
+                for row in rows:
+                    row_dict = {}
+                    for col, val in zip(columns, row):
+                        if isinstance(val, Decimal):
+                            row_dict[col] = float(val)
+                        else:
+                            row_dict[col] = val
+                    result.append(row_dict)
+
+            # Get expected result from task
+            expected_result = task.expected_result
+            
+            print(f"Query result: {result}")
+            print(f"Expected result: {expected_result}")
+            print(f"Result type: {type(result)}")
+            print(f"Expected result type: {type(expected_result)}")
+
+            # Compare results
+            success = (result == expected_result)
+            print(f"Comparison result: {success}")
+
+            if success:
+                # Update task status to completed (2)
+                TaskStatus.objects.update_or_create(
+                    user_id=current_user.user_id,
+                    task_id=task_id,
+                    defaults={'status': 2, 'date': timezone.now()}
+                )
+                print(f"Task status updated for user {current_user.user_id}, task {task_id}")
+
+            return JsonResponse({
+                'success': success,
+                'result': result,
+                'redirect': '/app_dev/tasks/' if success else None
+            })
+
+        except Exception as e:
+            print(f"Error executing query: {str(e)}")
+            # Record error
+            ErrorsRecord.objects.create(
+                user_id=current_user.user_id,
+                task_id=task_id,
+                error_content=str(e),
+                date=timezone.now()
+            )
+            # Record failed query
+            QueryHistory.objects.create(
+                user_id=current_user.user_id,
+                task_id=task_id,
+                query_content=query,
+                date=timezone.now()
+            )
+            return JsonResponse({
+                'success': False,
+                'error': str(e),
+                'redirect': '/app_dev/tasks/'  # Add redirect even for errors
+            })
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@login_required(login_url='login')
+def game_page(request, task_id):
+    try:
+        print(f"Attempting to fetch task with ID: {task_id}")
+        task = Task.objects.select_related('cid').get(tid=task_id)
+        
+        # Get the expected columns from expected_result
+        expected_columns = []
+        if task.expected_result and len(task.expected_result) > 0:
+            expected_columns = list(task.expected_result[0].keys())
+        
+        # Get example data based on task type
+        example_data = []
+        try:
+            if task.task_type == 1:
+                example_data = list(Places.objects.filter(country_id=task.cid.cid))
+                print(f"Fetching Places data for country {task.cid.cid}")
+            elif task.task_type == 2:
+                example_data = list(Food.objects.filter(country_id=task.cid.cid))
+                print(f"Fetching Food data for country {task.cid.cid}")
+            elif task.task_type == 3:
+                example_data = list(Events.objects.filter(country_id=task.cid.cid))
+                print(f"Fetching Events data for country {task.cid.cid}")
+                
+            print(f"Example data count: {len(example_data)}")
+        except Exception as e:
+            print(f"Error fetching example data: {str(e)}")
+            pass
+        
+        context = {
+            'task': task,
+            'example_data': example_data,
+            'task_type': task.task_type,
+            'expected_columns': expected_columns
+        }
+        print("Context prepared successfully")
+        
+        return render(request, 'app/game_page.html', context)
+    except Task.DoesNotExist:
+        print(f"Task with ID {task_id} not found")
+        messages.error(request, 'Task not found.')
+        return redirect('app-user-page')
+    except Exception as e:
+        print(f"Error in game_page view: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(f"Full traceback: {traceback.format_exc()}")
+        messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('app-user-page')
+
+@login_required(login_url='login')
+def task_list(request):
+    try:
+        # Get current user
+        current_user_email = request.user.email
+        user_record = Users.objects.get(email=current_user_email)
+        user_id = user_record.user_id
+
+        # Get all countries
+        countries = Countries.objects.all()
+        
+        # Get task statuses for this user
+        task_statuses = TaskStatus.objects.filter(user_id=user_id)
+        completed_tasks = {status.task_id for status in task_statuses if status.status == 2}
+
+        # Get tasks with attempts (any query history indicates an attempt)
+        tasks_with_attempts = set(QueryHistory.objects.filter(
+            user_id=user_id
+        ).values_list('task_id', flat=True))
+
+        # Create country-based task structure
+        country_tasks = []
+        for country in countries:
+            # Get tasks for this country, ordered by difficulty
+            tasks = Task.objects.filter(cid=country).order_by('difficulty')
+            
+            # Initialize country data structure
+            country_data = {
+                'country': country,
+                'tasks': [],
+                'unlocked_difficulty': 1  # Start with easy difficulty
+            }
+            
+            # First task is always unlocked
+            prev_task_completed = True
+            for task in tasks:
+                # Check if task is locked based on previous task completion
+                is_locked = not prev_task_completed
+                
+                # Get task status
+                status = task_statuses.filter(task_id=task.tid).first()
+                task.status = status.status if status else 0
+                task.is_locked = is_locked
+                
+                # Check if user has attempted this task
+                task.has_attempts = task.tid in tasks_with_attempts
+                
+                country_data['tasks'].append(task)
+                
+                # Update completion status for next task
+                prev_task_completed = task.tid in completed_tasks
+
+            country_tasks.append(country_data)
+
+        context = {
+            'country_tasks': country_tasks,
+            'user_data': user_record,
+        }
+        return render(request, 'DynamicPage/task_list.html', context)
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('app-home')
