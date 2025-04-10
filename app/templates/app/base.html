@@ -23,6 +23,7 @@
             {% if user.is_authenticated %}
             <li><a href="{% url 'app-user-page' %}">Dashboard</a></li>
             <li><a href="{% url 'task-list' %}">Game</a></li>
+            <li><a href="{% url 'board' %}">Board</a></li>
             <li><a href="{% url 'chat' %}">AI Chat</a></li>
             <li>
               <a href="{% url 'logout' %}" class="nav-btn btn-logout">Logout</a>
