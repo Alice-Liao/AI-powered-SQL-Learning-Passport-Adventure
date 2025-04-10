@@ -185,50 +185,78 @@ document.addEventListener('DOMContentLoaded', function() {
             const errorMessage = document.getElementById('errorMessage');
             const compareResult = document.getElementById('compareResult');
 
+            // Clear previous results and messages
             resultStatus.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            errorMessage.textContent = '';
+            compareResult.classList.add('hidden');
+            
             if (data.success) {
+                // Show success message and results
                 resultStatus.className = 'success';
                 resultStatus.textContent = 'Query executed successfully!';
                 
-                // Create result table
-                let tableHTML = '<table><thead><tr>';
+                // Display result table
+                let tableHtml = '<table><thead><tr>';
                 if (data.result.length > 0) {
                     Object.keys(data.result[0]).forEach(key => {
-                        tableHTML += `<th>${key}</th>`;
+                        tableHtml += `<th>${key}</th>`;
                     });
-                    tableHTML += '</tr></thead><tbody>';
-                    data.result.forEach(row => {
-                        tableHTML += '<tr>';
-                        Object.values(row).forEach(value => {
-                            tableHTML += `<td>${value}</td>`;
-                        });
-                        tableHTML += '</tr>';
-                    });
-                    tableHTML += '</tbody></table>';
-                    resultTable.innerHTML = tableHTML;
                 }
-                errorMessage.classList.add('hidden');
+                tableHtml += '</tr></thead><tbody>';
                 
-                // Show compare result and submit button if results match
+                data.result.forEach(row => {
+                    tableHtml += '<tr>';
+                    Object.values(row).forEach(value => {
+                        tableHtml += `<td>${value}</td>`;
+                    });
+                    tableHtml += '</tr>';
+                });
+                tableHtml += '</tbody></table>';
+                resultTable.innerHTML = tableHtml;
+                
+                // Show success message and submit button
+                compareResult.innerHTML = `
+                    <p style="color: #2e7d32;">Congratulations! Your query is correct!</p>
+                    <button id="submitButton" class="submit-btn">Submit Solution</button>
+                `;
                 compareResult.classList.remove('hidden');
+
+                // Add submit button handler
+                document.getElementById('submitButton').addEventListener('click', function() {
+                    // Show confirmation dialog
+                    if (confirm('Are you sure you want to submit this solution? You can continue practicing if you want.')) {
+                        // Send submit request
+                        fetch('{% url "execute-query" task.tid %}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: 'query=' + encodeURIComponent(document.getElementById('queryInput').value) + '&submit=true'
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                window.location.href = '{% url "task-list" %}';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                    }
+                });
             } else {
+                // Show error message
                 resultStatus.className = 'error';
                 resultStatus.textContent = 'Error in query';
                 errorMessage.textContent = data.error;
                 errorMessage.classList.remove('hidden');
                 resultTable.innerHTML = '';
-                compareResult.classList.remove('hidden');  // Show submit button even on error
                 compareResult.innerHTML = `
-                    <p style="color: #c62828;">Your query has errors, but you can still submit and try again later.</p>
-                    <button id="submitButton" class="submit-btn">Submit and Continue</button>
+                    <p style="color: #c62828;">Your query has errors. Keep trying!</p>
                 `;
-            }
-
-            // Add redirect functionality for both success and error cases
-            if (data.redirect) {
-                document.getElementById('submitButton').addEventListener('click', function() {
-                    window.location.href = data.redirect;
-                });
+                compareResult.classList.remove('hidden');
             }
         })
         .catch(error => {

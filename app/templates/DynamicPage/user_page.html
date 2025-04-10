@@ -205,27 +205,30 @@
                 <tr>
                     <td>{{ task.tname }}</td>
                     <td>
-                        {% if task.difficulty == 1 %}
-                            <span class="difficulty easy">Easy</span>
-                        {% elif task.difficulty == 2 %}
-                            <span class="difficulty medium">Medium</span>
-                        {% elif task.difficulty == 3 %}
-                            <span class="difficulty hard">Hard</span>
-                        {% endif %}
+                        <span class="difficulty difficulty-{{ task.difficulty }}">
+                            {% if task.difficulty == 1 %}Easy
+                            {% elif task.difficulty == 2 %}Medium
+                            {% elif task.difficulty == 3 %}Hard
+                            {% endif %}
+                        </span>
                     </td>
                     <td>
-                        {% if task.status == 0 %}
-                            Not Started
-                        {% elif task.status == 1 %}
-                            In Progress
-                        {% elif task.status == 2 %}
+                        {% if task.status == 2 %}
                             Completed
+                        {% elif task.has_attempts %}
+                            In Progress
+                        {% else %}
+                            Not Started
                         {% endif %}
                     </td>
                     <td>{{ task.start_date|default:"-" }}</td>
                     <td>{{ task.error_count }}</td>
                     <td>
-                        <a href="{% url 'game_page' task.tid %}" class="view-btn">Play</a>
+                        {% if task.is_locked %}
+                            <button class="view-btn disabled" disabled title="Complete previous tasks to unlock">Play</button>
+                        {% else %}
+                            <a href="{% url 'game_page' task.tid %}" class="view-btn">Play</a>
+                        {% endif %}
                         <a href="{% url 'task-detail' task.tid %}" class="view-btn">View</a>
                     </td>
                 </tr>

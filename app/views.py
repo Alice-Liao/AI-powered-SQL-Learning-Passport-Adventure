@@ -45,85 +45,29 @@ def user_page(request):
 
         # Get task statuses for this user
         task_statuses = TaskStatus.objects.filter(user_id=user_id).select_related('task')
+        completed_tasks = {status.task_id for status in task_statuses if status.status == 2}
         
-        # Create a dictionary of task statuses for quick lookup
-        status_dict = {status.task_id: {'status': status.status, 'date': status.date} 
-                      for status in task_statuses}
-
-        # Get all tasks and annotate with status
-        tasks = Task.objects.all().select_related('cid')
+        # Get all tasks and organize by difficulty
+        tasks = Task.objects.all().order_by('difficulty')
         
-        # Define filter options
-        time_slots = [
-            ('all', 'All Time'),
-            ('1', 'Past Day'),
-            ('3', 'Past 3 Days'),
-            ('7', 'Past 7 Days'),
-            ('15', 'Past 15 Days'),
-            ('30', 'Past 30 Days')
-        ]
+        # Track previous task completion for locking mechanism
+        prev_task_completed = True  # First task is always unlocked
         
-        difficulty_levels = [
-            ('all', 'All Levels'),
-            (1, 'Easy'),
-            (2, 'Medium'),
-            (3, 'Hard')
-        ]
-        
-        completion_statuses = [
-            (0, 'Not Started'),
-            (1, 'In Progress'),
-            (2, 'Completed'),
-        ]
-        
-        # Get filter values from request
-        selected_time = request.GET.get('timeSlot', 'all')
-        selected_diff = request.GET.get('difficultyLevel', 'all')
-        selected_statuses = request.GET.getlist('completionStatus')
-        selected_errors = request.GET.get('errorHistory')
-        task_name_query = request.GET.get('taskName', '').strip()
-
-        # Apply filters
-        if selected_time != 'all':
-            days = int(selected_time)
-            cutoff_date = timezone.now().date() - timezone.timedelta(days=days)
-            query_history = query_history.filter(date__gte=cutoff_date)
-            error_history = error_history.filter(date__gte=cutoff_date)
-
-        # Get error counts for each task for the current user
-        error_counts = ErrorsRecord.objects.filter(
-            user_id=user_id  # Only count errors for current user
-        ).values('task_id').annotate(
-            error_count=models.Count('error_id')
-        )
-        
-        # Create error count dictionary for quick lookup
-        error_dict = {item['task_id']: item['error_count'] for item in error_counts}
-
-        # Apply difficulty filter if selected
-        if selected_diff != 'all':
-            tasks = tasks.filter(difficulty=int(selected_diff))
-
-        # Apply task name filter if provided
-        if task_name_query:
-            tasks = tasks.filter(tname__icontains=task_name_query)
-
-        # Convert to list and annotate with status and error count
-        tasks = list(tasks)
+        # Annotate tasks with status and lock information
+        tasks_list = []
         for task in tasks:
-            status_info = status_dict.get(task.tid, {'status': 0, 'date': None})
-            task.status = status_info['status']
-            task.start_date = status_info['date']
-            task.error_count = error_dict.get(task.tid, 0)  # Get error count for this task
-
-        # Apply status filter after annotation
-        if selected_statuses:
-            status_values = [int(status) for status in selected_statuses]
-            tasks = [task for task in tasks if task.status in status_values]
-
-        # Apply error filter - show only tasks with errors if selected
-        if selected_errors == 'true':
-            tasks = [task for task in tasks if task.error_count > 0]
+            # Get task status
+            status_info = task_statuses.filter(task_id=task.tid).first()
+            task.status = status_info.status if status_info else 0
+            task.start_date = status_info.date if status_info else None
+            
+            # Set lock status based on previous task completion
+            task.is_locked = not prev_task_completed
+            
+            # Update completion status for next task
+            prev_task_completed = task.tid in completed_tasks
+            
+            tasks_list.append(task)
 
         # Calculate progress percentage
         total_tasks = Task.objects.count()
@@ -147,13 +91,7 @@ def user_page(request):
             'user_data': user_record,
             'query_history': query_history[:5],
             'error_history': error_history[:5],
-            'user_progress': user_progress,
-            'tasks': tasks,
-            'time_slots': time_slots,
-            'difficulty_levels': difficulty_levels,
-            'completion_statuses': completion_statuses,
-            'selected_statuses': selected_statuses,
-            'task_name_query': task_name_query,
+            'tasks': tasks_list,  # Use the annotated tasks list
             'progress_percentage': round(progress_percentage, 1),
             'completed_tasks': completed_tasks,
             'total_tasks': total_tasks,
@@ -495,21 +433,34 @@ def question_detail(request, question_id):
 def execute_query(request, task_id):
     if request.method == 'POST':
         query = request.POST.get('query', '')
+        is_submit = request.POST.get('submit', 'false') == 'true'  # Check if this is a submit action
+        
         try:
+            # Remove semicolon from the end of query if present
+            query = query.strip().rstrip(';')
+            
             # Get the task and its country
             task = Task.objects.select_related('cid').get(tid=task_id)
             country_id = task.cid.cid
             current_user = Users.objects.get(email=request.user.email)
             
             # Modify query to include country filter
-            if 'WHERE' in query.upper():
+            if 'GROUP BY' in query.upper():
+                # Insert WHERE clause before GROUP BY
+                group_by_index = query.upper().find('GROUP BY')
+                query = (
+                    query[:group_by_index] + 
+                    f' WHERE country_id = {country_id} ' +
+                    query[group_by_index:]
+                )
+            elif 'WHERE' in query.upper():
                 query = query.replace('WHERE', f'WHERE country_id = {country_id} AND')
             else:
                 query = query + f' WHERE country_id = {country_id}'
             
             print(f"Modified query: {query}")
             
-            # Record query history regardless of success
+            # Record query history
             QueryHistory.objects.create(
                 user_id=current_user.user_id,
                 task_id=task_id,
@@ -522,7 +473,6 @@ def execute_query(request, task_id):
                 cursor.execute(query)
                 columns = [col[0] for col in cursor.description]
                 rows = cursor.fetchall()
-                # Convert Decimal to float
                 result = []
                 for row in rows:
                     row_dict = {}
@@ -536,28 +486,21 @@ def execute_query(request, task_id):
             # Get expected result from task
             expected_result = task.expected_result
             
-            print(f"Query result: {result}")
-            print(f"Expected result: {expected_result}")
-            print(f"Result type: {type(result)}")
-            print(f"Expected result type: {type(expected_result)}")
-
             # Compare results
             success = (result == expected_result)
             print(f"Comparison result: {success}")
 
-            if success:
+            if success and is_submit:  # Only update status if this is a submit action
                 # Update task status to completed (2)
                 TaskStatus.objects.update_or_create(
                     user_id=current_user.user_id,
                     task_id=task_id,
                     defaults={'status': 2, 'date': timezone.now()}
                 )
-                print(f"Task status updated for user {current_user.user_id}, task {task_id}")
 
             return JsonResponse({
                 'success': success,
-                'result': result,
-                'redirect': '/app_dev/tasks/' if success else None
+                'result': result
             })
 
         except Exception as e:
@@ -569,17 +512,9 @@ def execute_query(request, task_id):
                 error_content=str(e),
                 date=timezone.now()
             )
-            # Record failed query
-            QueryHistory.objects.create(
-                user_id=current_user.user_id,
-                task_id=task_id,
-                query_content=query,
-                date=timezone.now()
-            )
             return JsonResponse({
                 'success': False,
-                'error': str(e),
-                'redirect': '/app_dev/tasks/'  # Add redirect even for errors
+                'error': str(e)
             })
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
@@ -648,8 +583,8 @@ def task_list(request):
         # Get task statuses for this user
         task_statuses = TaskStatus.objects.filter(user_id=user_id)
         completed_tasks = {status.task_id for status in task_statuses if status.status == 2}
-
-        # Get tasks with attempts (any query history indicates an attempt)
+        
+        # Get tasks with attempts
         tasks_with_attempts = set(QueryHistory.objects.filter(
             user_id=user_id
         ).values_list('task_id', flat=True))
@@ -657,28 +592,31 @@ def task_list(request):
         # Create country-based task structure
         country_tasks = []
         for country in countries:
-            # Get tasks for this country, ordered by difficulty
             tasks = Task.objects.filter(cid=country).order_by('difficulty')
             
-            # Initialize country data structure
             country_data = {
                 'country': country,
                 'tasks': [],
-                'unlocked_difficulty': 1  # Start with easy difficulty
+                'unlocked_difficulty': 1
             }
             
-            # First task is always unlocked
             prev_task_completed = True
             for task in tasks:
-                # Check if task is locked based on previous task completion
+                # Check if task is locked
                 is_locked = not prev_task_completed
                 
                 # Get task status
                 status = task_statuses.filter(task_id=task.tid).first()
-                task.status = status.status if status else 0
-                task.is_locked = is_locked
                 
-                # Check if user has attempted this task
+                # Set task status
+                if task.tid in completed_tasks:
+                    task.status = 2  # Completed
+                elif task.tid in tasks_with_attempts:
+                    task.status = 1  # In Progress
+                else:
+                    task.status = 0  # Not Started
+                
+                task.is_locked = is_locked
                 task.has_attempts = task.tid in tasks_with_attempts
                 
                 country_data['tasks'].append(task)

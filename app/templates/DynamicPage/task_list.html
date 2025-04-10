@@ -45,10 +45,10 @@
                                     {% endif %}
                                 </span>
                                 <span class="status-badge status-{{ task.status }}">
-                                    {% if task.has_attempts %}
-                                        In Progress
-                                    {% elif task.status == 2 %}
+                                    {% if task.status == 2 %}
                                         Completed
+                                    {% elif task.has_attempts %}
+                                        In Progress
                                     {% else %}
                                         Not Started
                                     {% endif %}
