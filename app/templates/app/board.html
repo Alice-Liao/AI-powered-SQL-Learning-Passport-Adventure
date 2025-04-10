@@ -1,0 +1,50 @@
+{% extends 'app/base.html' %} {% load static %} {% block extra_css %}
+<link rel="stylesheet" href="{% static 'my_app/board.css' %}" />
+{% endblock %} {% block content %}
+<div class="board-container">
+  <div class="board-header">
+    <h1>Message Board</h1>
+    <p>Share your thoughts and experiences with other learners!</p>
+  </div>
+
+  {% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+    <div class="message {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="post-form">
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <textarea
+          name="content"
+          placeholder="Write your message here..."
+          required
+        ></textarea>
+      </div>
+      <button type="submit" class="post-button">Post Message</button>
+    </form>
+  </div>
+
+  <div class="messages-list">
+    {% for message in board_messages %}
+    <div class="message-card">
+      <div class="message-header">
+        <span class="user-name">{{ message.uid.name }}</span>
+        <span class="message-date"
+          >{{ message.date|date:"F j, Y, g:i a" }}</span
+        >
+      </div>
+      <div class="message-content">{{ message.content }}</div>
+    </div>
+    {% empty %}
+    <div class="no-messages">
+      <p>No messages yet. Be the first to post!</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

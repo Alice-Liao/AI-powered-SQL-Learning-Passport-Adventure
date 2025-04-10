@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
+from .views import board_view
 
 urlpatterns = [
     path("", views.home, name='app-home'),
@@ -12,6 +13,7 @@ urlpatterns = [
     path('task/<int:task_id>/', views.task_detail_view, name='task-detail'),
     path('llm_query/', views.llm_query_view, name='llm_query'),
     path('instructor_signup/', views.instructor_signup_view, name='instructor_signup'),
+    path('board/', board_view, name='board'),
     path('game/<int:task_id>/', views.game_page, name='game_page'),
     path('execute-query/<int:task_id>/', views.execute_query, name='execute-query'),
     path('tasks/', views.task_list, name='task-list'),

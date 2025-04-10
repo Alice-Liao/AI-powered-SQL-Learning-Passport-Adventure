@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect
-from .models import Users, Admins, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus, Countries, Places, Food, Events
+
+from .models import Users, Admins, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus, MbRecord, Countries, Places, Food, Events
+
 from django.db import connection
 from django.core.exceptions import ObjectDoesNotExist
 from django.conf import settings
@@ -439,6 +441,30 @@ def llm_query_view(request):
         'error': error
     })
 
+@login_required(login_url='login')
+def board_view(request):
+    if request.method == 'POST':
+        content = request.POST.get('content', '').strip()
+        if content:
+            try:
+                current_user = Users.objects.get(email=request.user.email)
+                MbRecord.objects.create(
+                    content=content,
+                    uid=current_user,
+                    date=timezone.now()
+                )
+                messages.success(request, 'Your message has been posted!')
+            except Exception as e:
+                messages.error(request, 'Error posting message. Please try again.')
+            return redirect('board')
+    
+    # Get all messages ordered by date (newest first)
+    board_messages = MbRecord.objects.select_related('uid').order_by('-date')
+    
+    return render(request, 'app/board.html', {
+        'board_messages': board_messages
+    })
+  
     ##################################
     # Game Section
     ##################################

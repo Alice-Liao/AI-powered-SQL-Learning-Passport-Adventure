@@ -24,7 +24,6 @@ class Countries(models.Model):
         managed = False
         db_table = 'countries'
 
-
 class ErrorsRecord(models.Model):
     error_id = models.AutoField(primary_key=True)
     user = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
@@ -35,6 +34,31 @@ class ErrorsRecord(models.Model):
     class Meta:
         managed = False
         db_table = 'errors_record'
+
+
+class Events(models.Model):
+    eid = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    month = models.IntegerField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    country = models.ForeignKey(Countries, models.DO_NOTHING, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'events'
+
+
+class Food(models.Model):
+    fid = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    type = models.CharField(max_length=50, blank=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    country = models.ForeignKey(Countries, models.DO_NOTHING, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'food'
 
 
 class LoginHistory(models.Model):
@@ -50,6 +74,17 @@ class LoginHistory(models.Model):
         db_table = 'login_history'
 
 
+class MbRecord(models.Model):
+    mb_id = models.AutoField(primary_key=True)
+    content = models.CharField(blank=True, null=True)
+    uid = models.ForeignKey('Users', models.DO_NOTHING, db_column='uid', blank=True, null=True)
+    date = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'mb_record'
+
+
 class Messages(models.Model):
     message_id = models.AutoField(primary_key=True)
     sender = models.ForeignKey('Users', models.DO_NOTHING, blank=True, null=True)
@@ -60,6 +95,19 @@ class Messages(models.Model):
     class Meta:
         managed = False
         db_table = 'messages'
+
+
+class Places(models.Model):
+    pid = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    country = models.ForeignKey(Countries, models.DO_NOTHING, blank=True, null=True)
+    category = models.CharField(max_length=50, blank=True, null=True)
+    visitors_per_year = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'places'
 
 
 class Progress(models.Model):
@@ -87,10 +135,10 @@ class QueryHistory(models.Model):
 class Task(models.Model):
     tid = models.AutoField(primary_key=True)
     difficulty = models.IntegerField(blank=True, null=True)
-    tname = models.CharField(max_length=30, blank=True, null=True)
+    tname = models.CharField(max_length=100, blank=True, null=True)
     time = models.DateField(blank=True, null=True)
-    hint = models.CharField(max_length=30, blank=True, null=True)
-    description = models.CharField(max_length=30, blank=True, null=True)
+    hint = models.CharField(max_length=100, blank=True, null=True)
+    description = models.CharField(max_length=100, blank=True, null=True)
     cid = models.ForeignKey(Countries, models.DO_NOTHING, db_column='cid')
     expected_result = models.JSONField(null=True, blank=True)
     task_type = models.IntegerField(blank=True, null=True)
