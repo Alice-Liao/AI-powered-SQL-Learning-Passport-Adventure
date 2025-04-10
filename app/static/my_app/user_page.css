@@ -224,28 +224,29 @@ tr:hover {
 }
 
 .progress-bar-outer {
-    height: 25px;
-    background-color: #e9ecef;
-    border-radius: 5px;
+    width: 100%;
+    background-color: #f0f0f0;
+    border-radius: 10px;
     overflow: hidden;
 }
 
 .progress-bar-inner {
-    height: 100%;
-    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
-    border-radius: 5px;
-    transition: width 0.5s ease;
+    background-color: #4CAF50;
+    height: 20px;
+    border-radius: 10px;
+    transition: width 0.3s ease;
     position: relative;
 }
 
 .progress-text {
-    color: #fff;
-    font-weight: bold;
     position: absolute;
-    top: 50%;
     left: 50%;
+    top: 50%;
     transform: translate(-50%, -50%);
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+    color: white;
+    font-weight: bold;
+    white-space: nowrap;
+    /* 防止文字换行 */
 }
 
 /* recent queries and errors settings */
@@ -267,4 +268,53 @@ tr:hover {
     padding: 10px;
     border-radius: 4px;
     word-break: break-word;
+}
+
+.view-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    margin-right: 8px;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+.view-btn:first-child {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.view-btn:first-child:hover {
+    background-color: #45a049;
+}
+
+.view-btn:last-child {
+    background-color: #2196F3;
+    color: white;
+}
+
+.view-btn:last-child:hover {
+    background-color: #1976D2;
+}
+
+.difficulty {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.difficulty.easy {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.difficulty.medium {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.difficulty.hard {
+    background-color: #ffebee;
+    color: #c62828;
 }

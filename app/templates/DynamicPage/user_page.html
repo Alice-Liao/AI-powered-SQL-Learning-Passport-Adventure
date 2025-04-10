@@ -192,7 +192,6 @@
         <table id="tasksTable">
             <thead>
                 <tr>
-                    <th>Task ID</th>
                     <th>Task Name</th>
                     <th>Difficulty</th>
                     <th>Status</th>
@@ -204,9 +203,16 @@
             <tbody>
                 {% for task in tasks %}
                 <tr>
-                    <td>{{ task.tid }}</td>
                     <td>{{ task.tname }}</td>
-                    <td>{{ task.difficulty }}</td>
+                    <td>
+                        {% if task.difficulty == 1 %}
+                            <span class="difficulty easy">Easy</span>
+                        {% elif task.difficulty == 2 %}
+                            <span class="difficulty medium">Medium</span>
+                        {% elif task.difficulty == 3 %}
+                            <span class="difficulty hard">Hard</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if task.status == 0 %}
                             Not Started
@@ -218,7 +224,10 @@
                     </td>
                     <td>{{ task.start_date|default:"-" }}</td>
                     <td>{{ task.error_count }}</td>
-                    <td><a href="{% url 'task-detail' task.tid %}" class="view-btn">View</a></td>
+                    <td>
+                        <a href="{% url 'game_page' task.tid %}" class="view-btn">Play</a>
+                        <a href="{% url 'task-detail' task.tid %}" class="view-btn">View</a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -281,6 +290,12 @@
             });
             document.querySelector('form').submit();
         });
+
+        const progressBar = document.querySelector('.progress-bar-inner');
+        if (progressBar) {
+            const progress = progressBar.dataset.progress;
+            progressBar.style.setProperty('--progress-width', `${progress}%`);
+        }
     });
 </script>
 {% endblock %}

@@ -14,4 +14,7 @@ urlpatterns = [
     path('llm_query/', views.llm_query_view, name='llm_query'),
     path('instructor_signup/', views.instructor_signup_view, name='instructor_signup'),
     path('board/', board_view, name='board'),
+    path('game/<int:task_id>/', views.game_page, name='game_page'),
+    path('execute-query/<int:task_id>/', views.execute_query, name='execute-query'),
+    path('tasks/', views.task_list, name='task-list'),
 ]

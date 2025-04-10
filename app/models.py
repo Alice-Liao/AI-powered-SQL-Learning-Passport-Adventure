@@ -140,7 +140,7 @@ class Task(models.Model):
     hint = models.CharField(max_length=100, blank=True, null=True)
     description = models.CharField(max_length=100, blank=True, null=True)
     cid = models.ForeignKey(Countries, models.DO_NOTHING, db_column='cid')
-    expected_result = models.JSONField(blank=True, null=True)
+    expected_result = models.JSONField(null=True, blank=True)
     task_type = models.IntegerField(blank=True, null=True)
 
     class Meta:
@@ -149,9 +149,9 @@ class Task(models.Model):
 
 
 class TaskStatus(models.Model):
-    user = models.OneToOneField('Users', models.DO_NOTHING, primary_key=True)  # The composite primary key (user_id, task_id) found, that is not supported. The first column is selected.
+    user = models.OneToOneField('Users', models.DO_NOTHING, primary_key=True)
     task = models.ForeignKey(Task, models.DO_NOTHING)
-    status = models.IntegerField()
+    status = models.IntegerField()  # 0: not started, 1: in progress, 2: completed
     date = models.DateField(blank=True, null=True)
 
     class Meta:
@@ -190,3 +190,41 @@ class Visa(models.Model):
     class Meta:
         managed = False
         db_table = 'visa'
+
+class Events(models.Model):
+    eid = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=30)
+    month = models.IntegerField(blank=True, null=True)
+    description = models.TextField()
+    city = models.CharField(max_length=30)
+    # country_id = models.ForeignKey(Countries, models.DO_NOTHING, db_column='country')
+    country_id = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'events'
+
+class Food(models.Model):
+    fid = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=30)
+    type = models.CharField(max_length=30, blank=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    # country_id = models.ForeignKey(Countries, models.DO_NOTHING, db_column='country')
+    country_id = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'food'
+
+class Places(models.Model):
+    pid = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=30)
+    city = models.CharField(max_length=30)
+    # country_id = models.ForeignKey(Countries, models.DO_NOTHING, db_column='country')
+    country_id = models.IntegerField()
+    category = models.CharField(max_length=50)
+    visitors_per_year = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'places'
