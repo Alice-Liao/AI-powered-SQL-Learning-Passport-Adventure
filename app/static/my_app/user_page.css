@@ -1,340 +1,339 @@
 body {
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
-    margin: 0;
-    /* padding: 20px; */
-    background-color: #f5f5f5;
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  /* padding: 20px; */
+  background-color: #f5f5f5;
 }
 
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    margin-top: 30px;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 1200px;
+  margin: 0 auto;
+  margin-top: 30px;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
-    color: #333;
-    margin-bottom: 20px;
+  color: #333;
+  margin-bottom: 20px;
 }
 
 .filter-section {
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 15px;
-    margin-bottom: 20px;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 20px;
 }
 
 .filter-group {
-    margin-bottom: 20px;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    background-color: #fff;
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #fff;
 }
 
 .filter-group h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 5px;
+  margin-top: 0;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
 }
 
 .filter-select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: #fff;
-    font-size: 14px;
-    color: #333;
-    box-sizing: border-box;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 14px;
+  color: #333;
+  box-sizing: border-box;
 }
 
 .filter-select[multiple] {
-    height: 150px;
-    padding-top: 5px;
+  height: 150px;
+  padding-top: 5px;
 }
 
 .filter-actions {
-    display: flex;
-    justify-content: flex-start;
-    gap: 10px;
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
 }
 
 .apply-btn,
 .reset-btn {
-    padding: 10px 15px;
-    border-radius: 4px;
-    font-size: 16px;
-    cursor: pointer;
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
 }
 
 .apply-btn {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
+  background-color: #4caf50;
+  color: white;
+  border: none;
 }
 
 .apply-btn:hover {
-    background-color: #45a049;
+  background-color: #45a049;
 }
 
 .reset-btn {
-    background-color: #f44336;
-    color: white;
-    border: none;
+  background-color: #f44336;
+  color: white;
+  border: none;
 }
 
 .reset-btn:hover {
-    background-color: #d32f2f;
+  background-color: #d32f2f;
 }
 
 .result-count {
-    margin-bottom: 10px;
-    font-weight: bold;
+  margin-bottom: 10px;
+  font-weight: bold;
 }
 
 .table-container {
-    overflow-x: auto;
+  overflow-x: auto;
 }
 
 table {
-    width: 100%;
-    border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 th,
 td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #ddd;
-    text-align: left;
+  padding: 12px 15px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
 }
 
 th {
-    background-color: #f2f2f2;
-    cursor: pointer;
+  background-color: #f2f2f2;
+  cursor: pointer;
 }
 
 th:hover {
-    background-color: #e6e6e6;
+  background-color: #e6e6e6;
 }
 
 tr:hover {
-    background-color: #f5f5f5;
+  background-color: #f5f5f5;
 }
 
 .sort-icon {
-    margin-left: 5px;
+  margin-left: 5px;
 }
 
 .checkbox-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .checkbox-item {
-    display: flex;
-    align-items: center;
-    margin-right: 15px;
+  display: flex;
+  align-items: center;
+  margin-right: 15px;
 }
 
 .checkbox-item input {
-    margin-right: 5px;
+  margin-right: 5px;
 }
 
 .filter-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
 }
 
 .filter-header h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
 }
 
 .filter-enable {
-    width: 16px;
-    height: 16px;
-    margin: 0;
-    cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
 }
 
 /* Optional: Add hover effect */
 .filter-header:hover h3 {
-    color: #4CAF50;
+  color: #4caf50;
 }
 
 /* Style disabled select elements */
 .filter-select:disabled {
-    background-color: #f5f5f5;
-    cursor: not-allowed;
-    opacity: 0.7;
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
 }
 
 .header-actions {
-    display: flex;
-    gap: 15px;
+  display: flex;
+  gap: 15px;
 }
 
 .logout-btn {
-    padding: 8px 16px;
-    background-color: #dc3545;
-    color: white !important;
-    text-decoration: none;
-    border-radius: 4px;
-    font-weight: 500;
-    transition: background-color 0.2s;
+  padding: 8px 16px;
+  background-color: #dc3545;
+  color: white !important;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.2s;
 }
 
 .logout-btn:hover {
-    background-color: #c82333;
-    text-decoration: none;
-    color: white;
+  background-color: #c82333;
+  text-decoration: none;
+  color: white;
 }
-
 
 /* progress bar settings */
 .progress-container {
-    margin-bottom: 20px;
+  margin-bottom: 20px;
 }
 
 .progress-title {
-    margin-bottom: 10px;
-    font-weight: bold;
-    display: flex;
-    justify-content: space-between;
+  margin-bottom: 10px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
 }
 
 .progress-bar-outer {
-    width: 100%;
-    background-color: #f0f0f0;
-    border-radius: 10px;
-    overflow: hidden;
+  width: 100%;
+  background-color: #f0f0f0;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .progress-bar-inner {
-    background-color: #4CAF50;
-    height: 20px;
-    border-radius: 10px;
-    transition: width 0.3s ease;
-    position: relative;
+  background-color: #4caf50;
+  height: 20px;
+  border-radius: 10px;
+  transition: width 0.3s ease;
+  position: relative;
 }
 
 .progress-text {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-weight: bold;
-    white-space: nowrap;
-    /* 防止文字换行 */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  white-space: nowrap;
+  /* 防止文字换行 */
 }
 
 /* recent queries and errors settings */
 .query-content {
-    width: fit-content;
-    max-width: 100%;
-    background: #fff3cd;
-    padding: 10px;
-    border-radius: 4px;
-    color: #856404;
-    word-break: break-word;
+  width: fit-content;
+  max-width: 100%;
+  background: #fff3cd;
+  padding: 10px;
+  border-radius: 4px;
+  color: #856404;
+  word-break: break-word;
 }
 
 .error-content {
-    width: fit-content;
-    max-width: 100%;
-    background-color: #dc3545;
-    color: white;
-    padding: 10px;
-    border-radius: 4px;
-    word-break: break-word;
+  width: fit-content;
+  max-width: 100%;
+  background-color: #dc3545;
+  color: white;
+  padding: 10px;
+  border-radius: 4px;
+  word-break: break-word;
 }
 
 .view-btn {
-    padding: 6px 12px;
-    border-radius: 4px;
-    text-decoration: none;
-    margin-right: 8px;
-    font-size: 0.9em;
-    transition: all 0.3s ease;
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  margin-right: 8px;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
 }
 
 /* Play button styles */
 .view-btn:first-child {
-    background-color: #4CAF50;
-    color: white;
+  background-color: #4caf50;
+  color: white;
 }
 
 .view-btn:first-child:hover {
-    background-color: #45a049;
+  background-color: #45a049;
 }
 
 /* View button styles */
 .view-btn:last-child {
-    background-color: #2196F3;
-    color: white;
+  background-color: #2196f3;
+  color: white;
 }
 
 .view-btn:last-child:hover {
-    background-color: #1976D2;
+  background-color: #1976d2;
 }
 
 /* Disabled button styles */
 .view-btn.disabled {
-    background-color: #cccccc !important;
-    /* Override other colors */
-    color: #666666 !important;
-    /* Darker text for better contrast */
-    cursor: not-allowed;
-    opacity: 0.7;
-    pointer-events: none;
-    /* Prevent hover effects */
-    border: none;
+  background-color: #cccccc !important;
+  /* Override other colors */
+  color: #666666 !important;
+  /* Darker text for better contrast */
+  cursor: not-allowed;
+  opacity: 0.7;
+  pointer-events: none;
+  /* Prevent hover effects */
+  border: none;
 }
 
 .view-btn.disabled:hover {
-    background-color: #cccccc !important;
-    color: #666666 !important;
+  background-color: #cccccc !important;
+  color: #666666 !important;
 }
 
 .difficulty {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-weight: 500;
 }
 
 .difficulty.easy {
-    background-color: #e8f5e9;
-    color: #2e7d32;
+  background-color: #e8f5e9;
+  color: #2e7d32;
 }
 
 .difficulty.medium {
-    background-color: #fff3e0;
-    color: #f57c00;
+  background-color: #fff3e0;
+  color: #f57c00;
 }
 
 .difficulty.hard {
-    background-color: #ffebee;
-    color: #c62828;
+  background-color: #ffebee;
+  color: #c62828;
 }

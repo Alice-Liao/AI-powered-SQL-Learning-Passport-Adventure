@@ -50,6 +50,13 @@ def user_page(request):
         # Get all tasks and organize by difficulty
         tasks = Task.objects.all().order_by('difficulty')
         
+        # Get task name filter from request
+        task_name_query = request.GET.get('taskName', '').strip()
+        
+        # Apply task name filter if provided
+        if task_name_query:
+            tasks = tasks.filter(tname__icontains=task_name_query)
+        
         # Track previous task completion for locking mechanism
         prev_task_completed = True  # First task is always unlocked
         
@@ -71,14 +78,9 @@ def user_page(request):
 
         # Calculate progress percentage
         total_tasks = Task.objects.count()
-        completed_tasks = TaskStatus.objects.filter(
-            user_id=user_id,
-            status=2  # Completed status
-        ).count()
-        
-        progress_percentage = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        completed_tasks_count = len(completed_tasks)
+        progress_percentage = (completed_tasks_count / total_tasks * 100) if total_tasks > 0 else 0
 
-        
         # Update progress in database
         Progress.objects.update_or_create(
             user_id=user_id,
@@ -91,10 +93,11 @@ def user_page(request):
             'user_data': user_record,
             'query_history': query_history[:5],
             'error_history': error_history[:5],
-            'tasks': tasks_list,  # Use the annotated tasks list
+            'tasks': tasks_list,
             'progress_percentage': round(progress_percentage, 1),
-            'completed_tasks': completed_tasks,
+            'completed_tasks': completed_tasks_count,
             'total_tasks': total_tasks,
+            'task_name_query': task_name_query,  # Add this to context for the template
         }
 
         return render(request, 'DynamicPage/user_page.html', context)
