@@ -207,26 +207,13 @@ def instructor_signup_view(request):
         if form.is_valid():
             try:
                 user = form.save()
-                
-                # Create admin record for the new instructor
-                from .models import Admins
-                db_user = Users.objects.get(email=user.email)
-                
-                # Check if user is already an admin
-                if Admins.objects.filter(user=db_user).exists():
-                    messages.error(request, 'This email is already registered as an instructor.')
-                    return render(request, 'app/signup.html', {'form': form, 'instructor': True})
-                
-                # Create admin record
-                Admins.objects.create(user=db_user)
-                
                 login(request, user)
                 messages.success(request, 'Instructor account created successfully!')
                 return redirect('app-user-page')
             except IntegrityError:
                 messages.error(request, 'This email is already registered.')
             except Exception as e:
-                messages.error(request, str(e))
+                messages.error(request, f'An error occurred: {str(e)}')
         else:
             for field in form:
                 for error in field.errors:

@@ -50,8 +50,11 @@ class SignUpForm(BaseSignUpForm):
 class InstructorSignUpForm(BaseSignUpForm):
     def save(self, commit=True):
         user = super().save(commit)
-        db_user = Users.objects.get(email=user.email)
-        Admins.objects.create(user=db_user)
+        if commit:
+            # Create admin record for the new instructor
+            from .models import Admins
+            db_user = Users.objects.get(email=user.email)
+            Admins.objects.create(user=db_user)
         return user
 
 class LoginForm(forms.Form):
