@@ -18,4 +18,8 @@ urlpatterns = [
     path('execute-query/<int:task_id>/', views.execute_query, name='execute-query'),
     path('tasks/', views.task_list, name='task-list'),
     path('instructor-dashboard/', views.instructor_dashboard, name='instructor-dashboard'),
+    path('send_message/', views.send_message, name='send_message'),
+    path('message_inbox/', views.message_inbox, name='message_inbox'),
+    path('reply_message/', views.reply_message, name='reply_message'),
+    path('instructor-messages/', views.instructor_message_inbox, name='instructor_message_inbox'),
 ]

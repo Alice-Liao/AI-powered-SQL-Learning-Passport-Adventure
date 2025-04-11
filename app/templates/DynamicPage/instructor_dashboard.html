@@ -1,189 +1,410 @@
-{% extends 'app/base.html' %}
-{% load static %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'my_app/instructor_dashboard.css' %}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% extends 'app/base.html' %} {% load static %} {% block extra_css %}
+<link rel="stylesheet" href="{% static 'my_app/instructor_dashboard.css' %}" />
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+/>
 <style>
-.progress-slider {
+  .dashboard-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .welcome-text {
+    margin: 0;
+    color: #666;
+    font-size: 1.2em;
+  }
+
+  .progress-slider {
     width: 100%;
     height: 20px;
     background: #e0e0e0;
     border-radius: 10px;
     position: relative;
     overflow: hidden;
-}
+  }
 
-.progress-slider-fill {
+  .progress-slider-fill {
     height: 100%;
-    background: #4CAF50;
+    background: #4caf50;
     border-radius: 10px;
     transition: width 0.3s ease;
-}
+  }
 
-.progress-slider-handle {
+  .progress-slider-handle {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
     width: 20px;
     height: 20px;
     background: #fff;
-    border: 2px solid #4CAF50;
+    border: 2px solid #4caf50;
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     z-index: 2;
-}
+  }
 
-.progress-text {
+  .progress-text {
     margin-top: 5px;
     font-size: 14px;
     color: #666;
-}
+  }
+
+  /* Message Modal Styles */
+  .message-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+
+  .modal-content {
+    position: relative;
+    background-color: #fff;
+    margin: 15% auto;
+    padding: 20px;
+    width: 50%;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .close-modal {
+    position: absolute;
+    right: 20px;
+    top: 10px;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  .message-form {
+    margin-top: 20px;
+  }
+
+  .message-input {
+    width: 100%;
+    height: 100px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+  }
+
+  .send-message-btn {
+    background-color: #4caf50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .send-message-btn:hover {
+    background-color: #45a049;
+  }
+
+  .message-box-btn {
+    background-color: #4caf50;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.3s;
+  }
+
+  .message-box-btn:hover {
+    background-color: #45a049;
+  }
+
+  .message-box-btn i {
+    font-size: 1.2em;
+  }
+
+  .btn-message {
+    background-color: #4caf50;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.3s;
+  }
+
+  .btn-message:hover {
+    background-color: #45a049;
+  }
+
+  .btn-message i {
+    font-size: 1.2em;
+  }
 </style>
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block content %}
 <div class="dashboard-container">
-    <div class="dashboard-header">
-        <div>
-            <h1>Instructor Dashboard</h1>
-            <p class="welcome-message">Welcome back, {{ user_data.name }}!</p>
-        </div>
+  <div class="dashboard-header">
+    <h1>Instructor Dashboard</h1>
+    <div class="header-right">
+      <p class="welcome-text">Welcome back, {{ user_data.name }}!</p>
+      <a href="{% url 'instructor_message_inbox' %}" class="message-box-btn">
+        <i class="fas fa-envelope"></i>
+        Message Box
+      </a>
     </div>
+  </div>
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <i class="fas fa-users"></i>
-            <h3>Total Students</h3>
-            <div class="stat-number">{{ total_students }}</div>
-        </div>
-        <div class="stat-card">
-            <i class="fas fa-user-check"></i>
-            <h3>Active Students</h3>
-            <div class="stat-number">{{ active_students }}</div>
-        </div>
-        <div class="stat-card">
-            <i class="fas fa-chart-line"></i>
-            <h3>Average Progress</h3>
-            <div class="stat-number">{{ average_progress }}%</div>
-        </div>
-        <div class="stat-card">
-            <i class="fas fa-tasks"></i>
-            <h3>Total Tasks Completed</h3>
-            <div class="stat-number">{{ total_completed_tasks }}</div>
-        </div>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <i class="fas fa-users"></i>
+      <h3>Total Students</h3>
+      <div class="stat-number">{{ total_students }}</div>
     </div>
+    <div class="stat-card">
+      <i class="fas fa-user-check"></i>
+      <h3>Active Students</h3>
+      <div class="stat-number">{{ active_students }}</div>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-chart-line"></i>
+      <h3>Average Progress</h3>
+      <div class="stat-number">{{ average_progress }}%</div>
+    </div>
+    <div class="stat-card">
+      <i class="fas fa-tasks"></i>
+      <h3>Total Tasks Completed</h3>
+      <div class="stat-number">{{ total_completed_tasks }}</div>
+    </div>
+  </div>
 
-    <div class="student-progress-section">
-        <div class="section-header">
-            <h2>Student Progress</h2>
-            <div class="search-filter">
-                <input type="text" id="searchInput" placeholder="Search students...">
-                <select id="progressFilter">
-                    <option value="all">All Progress</option>
-                    <option value="0-25">0-25%</option>
-                    <option value="25-50">25-50%</option>
-                    <option value="50-75">50-75%</option>
-                    <option value="75-100">75-100%</option>
-                </select>
-            </div>
-        </div>
-        <div class="table-container">
-            <table id="studentTable">
-                <thead>
-                    <tr>
-                        <th>Student Name</th>
-                        <th>Email</th>
-                        <th>Last Login</th>
-                        <th>Progress</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in student_data %}
-                    <tr data-progress="{{ student.progress_percentage }}">
-                        <td>{{ student.name }}</td>
-                        <td>{{ student.email }}</td>
-                        <td>{{ student.last_login|date:"M d, Y" }}</td>
-                        <td>
-                            <div class="progress-slider">
-                                <div class="progress-slider-fill" style="width: {{ student.progress_percentage }}%"></div>
-                                <!-- <div class="progress-slider-handle" style="left: {{ student.progress_percentage }}%"></div> -->
-                            </div>
-                            <div class="progress-text">
-                                {{ student.progress_percentage }}% ({{ student.completed_tasks }}/{{ total_tasks }} tasks completed)
-                            </div>
-                        </td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn-message" onclick="sendMessage('{{ student.email }}')">
-                                    <i class="fas fa-envelope"></i>
-                                    Message
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="no-students">No students found</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <div class="student-progress-section">
+    <div class="section-header">
+      <h2>Student Progress</h2>
+      <div class="search-filter">
+        <input type="text" id="searchInput" placeholder="Search students..." />
+        <select id="progressFilter">
+          <option value="all">All Progress</option>
+          <option value="0-25">0-25%</option>
+          <option value="25-50">25-50%</option>
+          <option value="50-75">50-75%</option>
+          <option value="75-100">75-100%</option>
+        </select>
+      </div>
     </div>
+    <div class="table-container">
+      <table id="studentTable">
+        <thead>
+          <tr>
+            <th>Student Name</th>
+            <th>Email</th>
+            <th>Last Login</th>
+            <th>Progress</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in student_data %}
+          <tr data-progress="{{ student.progress_percentage }}">
+            <td>{{ student.name }}</td>
+            <td>{{ student.email }}</td>
+            <td>{{ student.last_login|date:"M d, Y" }}</td>
+            <td>
+              <div class="progress-slider">
+                <div
+                  class="progress-slider-fill"
+                  style="width: {{ student.progress_percentage }}%"
+                ></div>
+                <!-- <div class="progress-slider-handle" style="left: {{ student.progress_percentage }}%"></div> -->
+              </div>
+              <div class="progress-text">
+                ({{ student.completed_tasks }}/{{ total_tasks }} tasks
+                completed) {{ student.progress_percentage }}%
+              </div>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button
+                  class="btn-message"
+                  onclick="sendMessage('{{ student.email }}')"
+                >
+                  <i class="fas fa-envelope"></i>
+                  Message
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="no-students">No students found</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Message Modal -->
+<div id="messageModal" class="message-modal">
+  <div class="modal-content">
+    <span class="close-modal">&times;</span>
+    <h3>Send Message</h3>
+    <form id="messageForm" class="message-form">
+      {% csrf_token %}
+      <input type="hidden" id="recipientEmail" name="recipient_email" />
+      <textarea
+        id="messageContent"
+        class="message-input"
+        placeholder="Type your message here..."
+        required
+      ></textarea>
+      <button type="submit" class="send-message-btn">Send Message</button>
+    </form>
+  </div>
 </div>
 
 <script>
-function sendMessage(email) {
-    // TODO: Implement message functionality
-    alert('Message functionality will be implemented soon!');
-}
+  function sendMessage(email) {
+    const modal = document.getElementById('messageModal');
+    const recipientEmail = document.getElementById('recipientEmail');
+    recipientEmail.value = email;
+    modal.style.display = 'block';
+  }
 
-// Search and filter functionality
-document.getElementById('searchInput').addEventListener('input', function(e) {
-    const searchText = e.target.value.toLowerCase();
-    filterTable(searchText);
-});
+  document.querySelector('.close-modal').addEventListener('click', function () {
+    document.getElementById('messageModal').style.display = 'none';
+  });
 
-document.getElementById('progressFilter').addEventListener('change', function(e) {
-    const filterValue = e.target.value;
-    filterTable('', filterValue);
-});
+  document
+    .getElementById('messageForm')
+    .addEventListener('submit', function (e) {
+      e.preventDefault();
+      const recipientEmail = document.getElementById('recipientEmail').value;
+      const messageContent = document.getElementById('messageContent').value;
 
-function filterTable(searchText = '', progressFilter = 'all') {
-    const rows = document.querySelectorAll('#studentTable tbody tr:not(.no-students)');
+      fetch('{% url "send_message" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+          recipient_email: recipientEmail,
+          message_content: messageContent,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            alert('Message sent successfully!');
+            document.getElementById('messageModal').style.display = 'none';
+            document.getElementById('messageContent').value = '';
+          } else {
+            alert('Error sending message: ' + data.error);
+          }
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+          alert('Error sending message');
+        });
+    });
+
+  // Helper function to get CSRF token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === name + '=') {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Search and filter functionality
+  document
+    .getElementById('searchInput')
+    .addEventListener('input', function (e) {
+      const searchText = e.target.value.toLowerCase();
+      filterTable(searchText);
+    });
+
+  document
+    .getElementById('progressFilter')
+    .addEventListener('change', function (e) {
+      const filterValue = e.target.value;
+      filterTable('', filterValue);
+    });
+
+  function filterTable(searchText = '', progressFilter = 'all') {
+    const rows = document.querySelectorAll(
+      '#studentTable tbody tr:not(.no-students)'
+    );
     let visibleCount = 0;
 
-    rows.forEach(row => {
-        const name = row.cells[0].textContent.toLowerCase();
-        const email = row.cells[1].textContent.toLowerCase();
-        const progress = parseFloat(row.dataset.progress);
-        
-        const matchesSearch = name.includes(searchText) || email.includes(searchText);
-        const matchesProgress = 
-            progressFilter === 'all' ||
-            (progressFilter === '0-25' && progress <= 25) ||
-            (progressFilter === '25-50' && progress > 25 && progress <= 50) ||
-            (progressFilter === '50-75' && progress > 50 && progress <= 75) ||
-            (progressFilter === '75-100' && progress > 75);
-        
-        if (matchesSearch && matchesProgress) {
-            row.style.display = '';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
-        }
+    rows.forEach((row) => {
+      const name = row.cells[0].textContent.toLowerCase();
+      const email = row.cells[1].textContent.toLowerCase();
+      const progress = parseFloat(row.dataset.progress);
+
+      const matchesSearch =
+        name.includes(searchText) || email.includes(searchText);
+      const matchesProgress =
+        progressFilter === 'all' ||
+        (progressFilter === '0-25' && progress <= 25) ||
+        (progressFilter === '25-50' && progress > 25 && progress <= 50) ||
+        (progressFilter === '50-75' && progress > 50 && progress <= 75) ||
+        (progressFilter === '75-100' && progress > 75);
+
+      if (matchesSearch && matchesProgress) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
     });
 
     // Show/hide no results message
     const noResultsRow = document.querySelector('.no-students');
     if (noResultsRow) {
-        noResultsRow.style.display = visibleCount === 0 ? '' : 'none';
+      noResultsRow.style.display = visibleCount === 0 ? '' : 'none';
     }
-}
+  }
 
-// Initial filter
-filterTable();
+  // Initial filter
+  filterTable();
 </script>
-{% endblock %} 
+{% endblock %}

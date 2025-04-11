@@ -3,18 +3,106 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'my_app/user_page.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.welcome-text {
+    margin: 0;
+}
+
+.message-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    margin-left: auto; /* This will push the button to the right */
+}
+
+.message-link:hover {
+    background-color: #45a049;
+}
+
+.message-link i {
+    font-size: 1.2em;
+}
+
+/* New progress bar styles */
+.progress-section {
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.progress-container {
+    margin-top: 15px;
+}
+
+.progress-title {
+    margin-bottom: 10px;
+    color: #333;
+    font-weight: 500;
+}
+
+.progress-bar-outer {
+    width: 100%;
+    height: 20px;
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    position: relative;
+}
+
+.progress-bar-inner {
+    width: 0;
+    height: 100%;
+    background-color: #4CAF50;
+    border-radius: 10px;
+    transition: width 1s ease-in-out;
+}
+
+.progress-text {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: #333;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 1px rgba(255,255,255,0.8);
+}
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="page-header">
-        <h1>Welcome, {{ user_data.name }}!</h1>
+        <div class="header-content">
+            <h1 class="welcome-text">Welcome, {{ user_data.name }}!</h1>
+            <a href="{% url 'message_inbox' %}" class="message-link">
+                <i class="fas fa-envelope"></i>
+                Messages
+            </a>
+        </div>
     </div>
 
     {% if messages %}
     <div class="messages">
         {% for message in messages %}
-        <div class="message {{ message.tags }}">
+        <div class="message message-{{ message.tags }}">
             {{ message }}
         </div>
         {% endfor %}
@@ -29,7 +117,7 @@
                 <span>Completed {{ completed_tasks }} / {{ total_tasks }} Tasks</span>
             </div>
             <div class="progress-bar-outer">
-                <div class="progress-bar-inner" style="width: {{ progress_percentage }}%">
+                <div class="progress-bar-inner" style="width: 0%">
                     <span class="progress-text">{{ progress_percentage }}%</span>
                 </div>
             </div>
@@ -162,9 +250,9 @@
             </div>
         </form>
     </div>
-    
+
     <div class="result-count">Showing <span id="resultCount">{{ tasks|length }}</span> results</div>
-    
+
     <div class="table-container">
         <table id="tasksTable">
             <thead>
@@ -220,7 +308,7 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         // Update result count
         document.getElementById("resultCount").textContent = document.querySelectorAll("tbody tr:not(.no-data)").length;
 
@@ -231,7 +319,6 @@
                 const select = filterGroup.querySelector('.filter-select');
                 const input = filterGroup.querySelector('.filter-input');
                 
-                // Handle select elements
                 if (select) {
                     select.disabled = !this.checked;
                     if (!this.checked) {
@@ -239,7 +326,6 @@
                     }
                 }
                 
-                // Handle text inputs
                 if (input) {
                     input.disabled = !this.checked;
                     if (!this.checked) {
@@ -252,7 +338,6 @@
         // Handle reset button
         document.querySelector('.reset-btn').addEventListener('click', function(e) {
             e.preventDefault();
-            // Reset all checkboxes and disable inputs/selects
             document.querySelectorAll('.filter-enable').forEach(checkbox => {
                 checkbox.checked = false;
                 const filterGroup = checkbox.closest('.filter-group');
@@ -271,11 +356,13 @@
             document.querySelector('form').submit();
         });
 
-        const progressBar = document.querySelector('.progress-bar-inner');
-        if (progressBar) {
-            const progress = progressBar.dataset.progress;
-            progressBar.style.setProperty('--progress-width', `${progress}%`);
-        }
+        // Animate progress bar with a small delay for visual effect
+        setTimeout(function() {
+            const progressBar = document.querySelector('.progress-bar-inner');
+            if (progressBar) {
+                progressBar.style.width = '{{ progress_percentage }}%';
+            }
+        }, 300);
     });
 </script>
 {% endblock %}

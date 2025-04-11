@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 
-from .models import Users, Admins, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus, MbRecord, Countries, Places, Food, Events
+from .models import Users, Admins, Task, QueryHistory, ErrorsRecord, Progress, TaskStatus, MbRecord, Countries, Places, Food, Events, Messages
 
 from django.db import connection
 from django.core.exceptions import ObjectDoesNotExist
@@ -19,6 +19,7 @@ from django.db import models
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from decimal import Decimal
+import json
 
 # Create your views here.
 
@@ -788,3 +789,191 @@ def instructor_dashboard(request):
             raise e
         messages.error(request, 'An error occurred while loading the dashboard.')
         return render(request, 'DynamicPage/instructor_dashboard.html', {'error': str(e)})
+
+@login_required(login_url='login')
+@csrf_exempt
+def send_message(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            recipient_email = data.get('recipient_email')
+            message_content = data.get('message_content')
+            
+            if not recipient_email or not message_content:
+                return JsonResponse({'success': False, 'error': 'Recipient email and message content are required'})
+            
+            # Get sender and recipient
+            sender = Users.objects.get(email=request.user.email)
+            recipient = Users.objects.get(email=recipient_email)
+            
+            # Verify sender is an instructor
+            is_instructor = Admins.objects.filter(user=sender).exists()
+            if not is_instructor:
+                return JsonResponse({'success': False, 'error': 'Only instructors can send messages'})
+            
+            # Create message
+            Messages.objects.create(
+                sender=sender,
+                receiver=recipient,
+                message_content=message_content,
+                timestamp=timezone.now()
+            )
+            
+            return JsonResponse({'success': True})
+        except Users.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Recipient not found'})
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON data'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required(login_url='login')
+def message_inbox(request):
+    try:
+        current_user = Users.objects.get(email=request.user.email)
+        
+        # Get all messages involving the current user (both sent and received)
+        all_messages = Messages.objects.filter(
+            models.Q(receiver=current_user) | models.Q(sender=current_user)
+        ).select_related('sender', 'receiver').order_by('timestamp')
+        
+        # Group messages by conversation partner (instructor)
+        conversations = {}
+        for message in all_messages:
+            # Determine the conversation partner (the instructor)
+            if message.sender == current_user:
+                partner = message.receiver
+            else:
+                partner = message.sender
+                
+            if partner not in conversations:
+                conversations[partner] = []
+            conversations[partner].append(message)
+        
+        # Convert conversations dict to list and sort by latest message
+        conversation_list = []
+        for partner, messages in conversations.items():
+            conversation_list.append({
+                'instructor': partner,
+                'messages': messages,
+                'latest_message': messages[-1].timestamp
+            })
+        
+        # Sort conversations by latest message timestamp, newest first
+        conversation_list.sort(key=lambda x: x['latest_message'], reverse=True)
+        
+        context = {
+            'conversations': conversation_list,
+            'user_data': current_user,
+            'is_instructor': False
+        }
+        
+        return render(request, 'DynamicPage/message_inbox.html', context)
+    except Users.DoesNotExist:
+        messages.error(request, 'User profile not found.')
+        return redirect('login')
+    except Exception as e:
+        if settings.DEBUG:
+            raise e
+        messages.error(request, 'An error occurred while loading messages.')
+        return redirect('app-user-page')
+
+@login_required(login_url='login')
+@csrf_exempt
+def reply_message(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            recipient_email = data.get('recipient_email')
+            message_content = data.get('message_content')
+            
+            if not recipient_email or not message_content:
+                return JsonResponse({'success': False, 'error': 'Recipient email and message content are required'})
+            
+            # Get sender and recipient
+            sender = Users.objects.get(email=request.user.email)
+            recipient = Users.objects.get(email=recipient_email)
+            
+            # Check if sender is an instructor
+            is_instructor = Admins.objects.filter(user=sender).exists()
+            
+            # If sender is an instructor, they can reply to students
+            # If sender is a student, they can only reply to instructors
+            if not is_instructor:
+                recipient_is_instructor = Admins.objects.filter(user=recipient).exists()
+                if not recipient_is_instructor:
+                    return JsonResponse({'success': False, 'error': 'Students can only reply to instructors'})
+            
+            # Create message
+            Messages.objects.create(
+                sender=sender,
+                receiver=recipient,
+                message_content=message_content,
+                timestamp=timezone.now()
+            )
+            
+            return JsonResponse({'success': True})
+        except Users.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Recipient not found'})
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON data'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required(login_url='login')
+def instructor_message_inbox(request):
+    try:
+        current_user = Users.objects.get(email=request.user.email)
+        
+        # Verify user is an instructor
+        is_instructor = Admins.objects.filter(user=current_user).exists()
+        if not is_instructor:
+            return redirect('app-user-page')
+        
+        # Get all messages involving the current instructor (both sent and received)
+        all_messages = Messages.objects.filter(
+            models.Q(receiver=current_user) | models.Q(sender=current_user)
+        ).select_related('sender', 'receiver').order_by('timestamp')
+        
+        # Group messages by conversation partner (student)
+        conversations = {}
+        for message in all_messages:
+            # Determine the conversation partner (the student)
+            if message.sender == current_user:
+                partner = message.receiver
+            else:
+                partner = message.sender
+                
+            if partner not in conversations:
+                conversations[partner] = []
+            conversations[partner].append(message)
+        
+        # Convert conversations dict to list and sort by latest message
+        conversation_list = []
+        for partner, messages in conversations.items():
+            conversation_list.append({
+                'student': partner,
+                'messages': messages,
+                'latest_message': messages[-1].timestamp
+            })
+        
+        # Sort conversations by latest message timestamp, newest first
+        conversation_list.sort(key=lambda x: x['latest_message'], reverse=True)
+        
+        context = {
+            'conversations': conversation_list,
+            'user_data': current_user,
+            'is_instructor': True
+        }
+        
+        return render(request, 'DynamicPage/instructor_message_inbox.html', context)
+    except Users.DoesNotExist:
+        messages.error(request, 'User profile not found.')
+        return redirect('login')
+    except Exception as e:
+        if settings.DEBUG:
+            raise e
+        messages.error(request, 'An error occurred while loading messages.')
+        return redirect('instructor-dashboard')

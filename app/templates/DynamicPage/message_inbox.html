@@ -1,0 +1,289 @@
+{% extends 'app/base.html' %} {% load static %} {% block extra_css %}
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+/>
+<style>
+  .message-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+  }
+
+  .message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .conversation-list {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 200px);
+  }
+
+  .conversation-sidebar {
+    width: 250px;
+    border-right: 1px solid #ddd;
+    overflow-y: auto;
+  }
+
+  .conversation-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .conversation-item:hover {
+    background-color: #f5f5f5;
+  }
+
+  .conversation-item.active {
+    background-color: #e3f2fd;
+  }
+
+  .conversation-partner {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+
+  .conversation-preview {
+    color: #666;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .conversation-main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .messages-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .message-bubble {
+    max-width: 80%;
+    margin: 10px 0;
+    padding: 10px 15px;
+    border-radius: 15px;
+    position: relative;
+  }
+
+  .message-sender {
+    background-color: #4caf50;
+    color: white;
+    margin-left: auto;
+  }
+
+  .message-receiver {
+    background-color: #e9ecef;
+    margin-right: auto;
+  }
+
+  .message-timestamp {
+    font-size: 0.75em;
+    color: #999;
+    margin-top: 5px;
+  }
+
+  .reply-form {
+    padding: 20px;
+    border-top: 1px solid #ddd;
+    background-color: #fff;
+  }
+
+  .reply-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    min-height: 60px;
+    margin-bottom: 10px;
+  }
+
+  .send-reply-btn {
+    background-color: #4caf50;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .send-reply-btn:hover {
+    background-color: #45a049;
+  }
+
+  .no-conversation-selected {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #666;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="message-container">
+  <div class="message-header">
+    <h2>Message Inbox</h2>
+  </div>
+
+  <div class="conversation-list">
+    <!-- Conversation Sidebar -->
+    <div class="conversation-sidebar">
+      {% for conversation in conversations %}
+      <div
+        class="conversation-item"
+        onclick="showConversation('{{ forloop.counter0 }}')"
+      >
+        <div class="conversation-partner">
+          {{ conversation.instructor.name }}
+        </div>
+        <div class="conversation-preview">
+          {{ conversation.messages.last.message_content|truncatechars:50 }}
+        </div>
+        <div class="message-timestamp">
+          {{ conversation.latest_message|date:"F j, Y, g:i a" }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Conversation Main Area -->
+    <div class="conversation-main">
+      <div id="no-conversation" class="no-conversation-selected">
+        <i
+          class="fas fa-comments"
+          style="font-size: 48px; margin-bottom: 20px"
+        ></i>
+        <p>Select a conversation to view messages</p>
+      </div>
+
+      {% for conversation in conversations %}
+      <div
+        id="conversation-{{ forloop.counter0 }}"
+        class="conversation-content"
+        style="display: none"
+      >
+        <div class="messages-container">
+          {% for message in conversation.messages %}
+          <div
+            class="message-bubble {% if message.sender == user_data %}message-sender{% else %}message-receiver{% endif %}"
+          >
+            {{ message.message_content }}
+            <div class="message-timestamp">
+              {{ message.timestamp|date:"F j, Y, g:i a" }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="reply-form">
+          {% csrf_token %}
+          <textarea
+            class="reply-input"
+            placeholder="Type your reply..."
+          ></textarea>
+          <button
+            class="send-reply-btn"
+            onclick="sendReply('{{ conversation.instructor.email }}', this.previousElementSibling)"
+          >
+            Send Reply
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function showConversation(conversationId) {
+    // Hide all conversations and remove active class
+    document
+      .querySelectorAll('.conversation-content')
+      .forEach((el) => (el.style.display = 'none'));
+    document
+      .querySelectorAll('.conversation-item')
+      .forEach((el) => el.classList.remove('active'));
+
+    // Hide no conversation message
+    document.getElementById('no-conversation').style.display = 'none';
+
+    // Show selected conversation and add active class
+    const selectedConversation = document.getElementById(
+      `conversation-${conversationId}`
+    );
+    if (selectedConversation) {
+      selectedConversation.style.display = 'flex';
+      selectedConversation.style.flexDirection = 'column';
+      document
+        .querySelectorAll('.conversation-item')
+        [conversationId].classList.add('active');
+
+      // Scroll to bottom of messages
+      const messagesContainer = selectedConversation.querySelector(
+        '.messages-container'
+      );
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  }
+
+  function sendReply(recipientEmail, textarea) {
+    const messageContent = textarea.value.trim();
+    if (!messageContent) {
+      alert('Please enter a message');
+      return;
+    }
+
+    fetch('{% url "reply_message" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify({
+        recipient_email: recipientEmail,
+        message_content: messageContent,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          location.reload();
+        } else {
+          alert('Error sending reply: ' + data.error);
+        }
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        alert('Error sending reply');
+      });
+  }
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === name + '=') {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+</script>
+{% endblock %}
