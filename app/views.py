@@ -116,29 +116,42 @@ def user_page(request):
         # Create country-based task structure
         tasks_list = []
         for country in countries:
-            country_tasks = Task.objects.filter(cid=country).order_by('difficulty')
+            # Get all tasks for this country, ordered by difficulty
+            all_country_tasks = Task.objects.filter(cid=country).order_by('difficulty')
             
+            # Get the filtered tasks for this country
+            country_tasks = tasks.filter(cid=country).order_by('difficulty')
+            
+            # Track completion status for all tasks in this country
             prev_task_completed = True
+            for task in all_country_tasks:
+                if task.tid in completed_tasks:
+                    prev_task_completed = True
+                else:
+                    prev_task_completed = False
+                    break
+            
+            # Process filtered tasks
             for task in country_tasks:
-                # Check if task is locked
+                # Check if task is locked based on all tasks in the country
                 is_locked = not prev_task_completed
                 
                 # Get task status
                 status = task_statuses.filter(task_id=task.tid).first()
                 
-                # Set task status
+                # Set task status and start date
                 if task.tid in completed_tasks:
                     task.status = 2  # Completed
+                    task.start_date = status.date if status else None
                 elif task.tid in tasks_with_attempts:
                     task.status = 1  # In Progress
+                    task.start_date = status.date if status else None
                 else:
                     task.status = 0  # Not Started
+                    task.start_date = None
                 
                 task.is_locked = is_locked
                 task.has_attempts = task.tid in tasks_with_attempts
-                
-                # Update completion status for next task
-                prev_task_completed = task.tid in completed_tasks
                 
                 tasks_list.append(task)
 

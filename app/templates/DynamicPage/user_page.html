@@ -289,11 +289,6 @@
                     <td>{{ task.start_date|default:"-" }}</td>
                     <td>{{ task.error_count }}</td>
                     <td>
-                        {% if task.is_locked %}
-                            <button class="view-btn disabled" disabled title="Complete previous tasks to unlock">Play</button>
-                        {% else %}
-                            <a href="{% url 'game_page' task.tid %}" class="view-btn">Play</a>
-                        {% endif %}
                         <a href="{% url 'task-detail' task.tid %}" class="view-btn">View</a>
                     </td>
                 </tr>
