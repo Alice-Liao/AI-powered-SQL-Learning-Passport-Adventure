@@ -17,4 +17,5 @@ urlpatterns = [
     path('game/<int:task_id>/', views.game_page, name='game_page'),
     path('execute-query/<int:task_id>/', views.execute_query, name='execute-query'),
     path('tasks/', views.task_list, name='task-list'),
+    path('instructor-dashboard/', views.instructor_dashboard, name='instructor-dashboard'),
 ]

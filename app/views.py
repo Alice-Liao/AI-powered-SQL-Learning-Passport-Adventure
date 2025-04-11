@@ -33,30 +33,75 @@ def user_page(request):
         user_record = Users.objects.get(email=current_user_email)
         user_id = user_record.user_id
 
+        # Check if user is an instructor
+        is_instructor = Admins.objects.filter(user=user_record).exists()
+        if is_instructor:
+            return redirect('instructor-dashboard')
+
         # Get user's query and error history
         query_history = QueryHistory.objects.filter(user_id=user_id).order_by('-date')
         error_history = ErrorsRecord.objects.filter(user_id=user_id).order_by('-date')
 
-        # Get user's progress
-        try:
-            user_progress = Progress.objects.get(user_id=user_id)
-        except Progress.DoesNotExist:
-            user_progress = None
+        # Define filter options
+        time_slots = [
+            ('all', 'All Time'),
+            ('1', 'Past Day'),
+            ('3', 'Past 3 Days'),
+            ('7', 'Past 7 Days'),
+            ('15', 'Past 15 Days'),
+            ('30', 'Past 30 Days')
+        ]
+        
+        difficulty_levels = [
+            ('all', 'All Levels'),
+            (1, 'Easy'),
+            (2, 'Medium'),
+            (3, 'Hard')
+        ]
+        
+        completion_statuses = [
+            (0, 'Not Started'),
+            (1, 'In Progress'),
+            (2, 'Completed'),
+        ]
+        
+        # Get filter values from request
+        selected_time = request.GET.get('timeSlot', 'all')
+        selected_diff = request.GET.get('difficultyLevel', 'all')
+        selected_statuses = request.GET.getlist('completionStatus')
+        selected_errors = request.GET.get('errorHistory')
+        task_name_query = request.GET.get('taskName', '').strip()
 
         # Get task statuses for this user
         task_statuses = TaskStatus.objects.filter(user_id=user_id).select_related('task')
         completed_tasks = {status.task_id for status in task_statuses if status.status == 2}
-        
+
         # Get all tasks and organize by difficulty
         tasks = Task.objects.all().order_by('difficulty')
-        
-        # Get task name filter from request
-        task_name_query = request.GET.get('taskName', '').strip()
-        
-        # Apply task name filter if provided
+
+        # Apply time slot filter
+        if selected_time != 'all':
+            days = int(selected_time)
+            cutoff_date = timezone.now().date() - timezone.timedelta(days=days)
+            # Filter tasks based on query and error history within the time slot
+            task_ids_with_activity = set(query_history.filter(date__gte=cutoff_date).values_list('task_id', flat=True)) | \
+                                     set(error_history.filter(date__gte=cutoff_date).values_list('task_id', flat=True))
+            tasks = tasks.filter(tid__in=task_ids_with_activity)
+
+        # Apply other filters
+        if selected_diff != 'all':
+            tasks = tasks.filter(difficulty=selected_diff)
+
+        if selected_statuses:
+            tasks = tasks.filter(tid__in=[status.task_id for status in task_statuses if status.status in map(int, selected_statuses)])
+
+        if selected_errors == 'true':
+            # Use distinct to ensure each task appears only once
+            tasks = tasks.filter(errorsrecord__user_id=user_id).distinct()
+
         if task_name_query:
             tasks = tasks.filter(tname__icontains=task_name_query)
-        
+
         # Track previous task completion for locking mechanism
         prev_task_completed = True  # First task is always unlocked
         
@@ -97,7 +142,14 @@ def user_page(request):
             'progress_percentage': round(progress_percentage, 1),
             'completed_tasks': completed_tasks_count,
             'total_tasks': total_tasks,
-            'task_name_query': task_name_query,  # Add this to context for the template
+            'task_name_query': task_name_query,
+            'time_slots': time_slots,
+            'difficulty_levels': difficulty_levels,
+            'completion_statuses': completion_statuses,
+            'selected_time': selected_time,
+            'selected_diff': selected_diff,
+            'selected_statuses': selected_statuses,
+            'selected_errors': selected_errors,
         }
 
         return render(request, 'DynamicPage/user_page.html', context)
@@ -122,7 +174,7 @@ def signup_view(request):
                 # Create the user and insert into your database
                 user = form.save()
                 
-                # Create initial progress record (optional)
+                # Create initial progress record
                 Progress.objects.create(
                     user_id=Users.objects.get(email=user.email).user_id,
                     progress_percentage=0
@@ -135,7 +187,7 @@ def signup_view(request):
             except IntegrityError:
                 messages.error(request, 'This email is already registered.')
             except Exception as e:
-                messages.error(request, str(e))
+                messages.error(request, f'An error occurred: {str(e)}')
         else:
             for field in form:
                 for error in field.errors:
@@ -155,22 +207,30 @@ def instructor_signup_view(request):
         if form.is_valid():
             try:
                 user = form.save()
+                
+                # Create admin record for the new instructor
+                from .models import Admins
                 db_user = Users.objects.get(email=user.email)
+                
+                # Check if user is already an admin
+                if Admins.objects.filter(user=db_user).exists():
+                    messages.error(request, 'This email is already registered as an instructor.')
+                    return render(request, 'app/signup.html', {'form': form, 'instructor': True})
+                
+                # Create admin record
                 Admins.objects.create(user=db_user)
+                
                 login(request, user)
                 messages.success(request, 'Instructor account created successfully!')
                 return redirect('app-user-page')
             except IntegrityError:
                 messages.error(request, 'This email is already registered.')
-                return render(request, 'app/signup.html', {'form': form, 'instructor': True})
             except Exception as e:
                 messages.error(request, str(e))
-                return render(request, 'app/signup.html', {'form': form, 'instructor': True})
         else:
             for field in form:
                 for error in field.errors:
                     messages.error(request, f"{field.label}: {error}")
-            return render(request, 'app/signup.html', {'form': form, 'instructor': True})
     else:
         form = InstructorSignUpForm()
 
@@ -178,7 +238,16 @@ def instructor_signup_view(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('app-user-page')
+        # Check if user is an instructor
+        try:
+            user_record = Users.objects.get(email=request.user.email)
+            is_instructor = Admins.objects.filter(user=user_record).exists()
+            if is_instructor:
+                return redirect('instructor-dashboard')
+            else:
+                return redirect('app-user-page')
+        except Users.DoesNotExist:
+            return redirect('app-user-page')
         
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -203,10 +272,16 @@ def login_view(request):
                     
                     messages.success(request, f'Welcome back, {user.name}!')
                     
+                    # Check if user is an instructor
+                    is_instructor = Admins.objects.filter(user=user).exists()
+                    
                     next_page = request.GET.get('next')
                     if next_page:
                         return redirect(next_page)
-                    return redirect('app-user-page')
+                    elif is_instructor:
+                        return redirect('instructor-dashboard')
+                    else:
+                        return redirect('app-user-page')
                 else:
                     messages.error(request, 'Invalid email or password.')
             except Users.DoesNotExist:
@@ -224,12 +299,62 @@ def logout_view(request):
 
 @login_required(login_url='login')
 def chat_view(request):
-    # For now, just render the template
-    # Later, we'll add the OpenAI integration
-    context = {
-        'chat_history': []  # This will store chat messages
-    }
-    return render(request, 'app/chat.html', context)
+    chat_history = []
+
+    try:
+        # 获取当前用户信息
+        current_user = request.user
+        db_user = Users.objects.get(email=current_user.email)
+
+        # 判断是否为 Instructor
+        is_instructor = Admins.objects.filter(user=db_user).exists()
+        role = "Instructor" if is_instructor else "Student"
+
+        if request.method == "POST":
+            prompt = request.POST.get("message", "").strip()
+            if prompt:
+                # 加入用户发言到聊天记录
+                chat_history.append({
+                    "content": prompt,
+                    "is_user": True,
+                    "timestamp": datetime.now().strftime("%I:%M %p")
+                })
+
+                try:
+                    # ✅ 使用 LLM 生成 SQL 并执行，返回格式化结果
+                    response_text = generate_sql_from_prompt(prompt, is_admin=is_instructor)
+
+                    # 加入 AI 回复到聊天记录
+                    chat_history.append({
+                        "content": response_text,
+                        "is_user": False,
+                        "timestamp": datetime.now().strftime("%I:%M %p")
+                    })
+
+                except Exception as e:
+                    chat_history.append({
+                        "content": f"❌ Error: {str(e)}",
+                        "is_user": False,
+                        "timestamp": datetime.now().strftime("%I:%M %p")
+                    })
+
+        return render(request, 'app/chat.html', {
+            "chat_history": chat_history,
+            "role": role,
+            "is_instructor": is_instructor
+        })
+
+    except Users.DoesNotExist:
+        messages.error(request, "User profile not found.")
+        return redirect("login")
+
+    except Exception as e:
+        messages.error(request, str(e))
+        return render(request, 'app/chat.html', {
+            "chat_history": chat_history,
+            "error": str(e),
+            "is_instructor": False
+        })
 
 @login_required(login_url='login')
 def task_detail_view(request, task_id):
@@ -280,74 +405,6 @@ def task_detail_view(request, task_id):
         return redirect('app-user-page')
 
 ########################################################
-# chat bot
-########################################################
-from django.shortcuts import render
-from django.db import connection
-from datetime import datetime
-from .llm_utils import generate_sql_from_prompt
-from .models import Admins
-from django.contrib.auth.decorators import login_required
-
-@login_required(login_url='login')
-def chat_view(request):
-    chat_history = []
-
-    try:
-        # 获取当前用户信息
-        current_user = request.user
-        db_user = Users.objects.get(email=current_user.email)
-
-        # 判断是否为 Instructor
-        is_admin = Admins.objects.filter(user=db_user).exists()
-        role = "Instructor" if is_admin else "Student"
-
-        if request.method == "POST":
-            prompt = request.POST.get("message", "").strip()
-            if prompt:
-                # 加入用户发言到聊天记录
-                chat_history.append({
-                    "content": prompt,
-                    "is_user": True,
-                    "timestamp": datetime.now().strftime("%I:%M %p")
-                })
-
-                try:
-                    # ✅ 使用 LLM 生成 SQL 并执行，返回格式化结果
-                    response_text = generate_sql_from_prompt(prompt, is_admin=is_admin)
-
-                    # 加入 AI 回复到聊天记录
-                    chat_history.append({
-                        "content": response_text,
-                        "is_user": False,
-                        "timestamp": datetime.now().strftime("%I:%M %p")
-                    })
-
-                except Exception as e:
-                    chat_history.append({
-                        "content": f"❌ Error: {str(e)}",
-                        "is_user": False,
-                        "timestamp": datetime.now().strftime("%I:%M %p")
-                    })
-
-        return render(request, 'app/chat.html', {
-            "chat_history": chat_history,
-            "role": role
-        })
-
-    except Users.DoesNotExist:
-        messages.error(request, "User profile not found.")
-        return redirect("login")
-
-    except Exception as e:
-        messages.error(request, str(e))
-        return render(request, 'app/chat.html', {
-            "chat_history": chat_history,
-            "error": str(e)
-        })
-
-
-########################################################
 # LLM Query
 ########################################################
 
@@ -389,6 +446,7 @@ def board_view(request):
         if content:
             try:
                 current_user = Users.objects.get(email=request.user.email)
+                is_instructor = Admins.objects.filter(user=current_user).exists()
                 MbRecord.objects.create(
                     content=content,
                     uid=current_user,
@@ -402,8 +460,13 @@ def board_view(request):
     # Get all messages ordered by date (newest first)
     board_messages = MbRecord.objects.select_related('uid').order_by('-date')
     
+    # Get current user's instructor status
+    current_user = Users.objects.get(email=request.user.email)
+    is_instructor = Admins.objects.filter(user=current_user).exists()
+    
     return render(request, 'app/board.html', {
-        'board_messages': board_messages
+        'board_messages': board_messages,
+        'is_instructor': is_instructor
     })
   
     ##################################
@@ -637,3 +700,104 @@ def task_list(request):
     except Exception as e:
         messages.error(request, str(e))
         return redirect('app-home')
+
+@login_required(login_url='login')
+def instructor_dashboard(request):
+    try:
+        current_user_email = request.user.email
+        user_record = Users.objects.get(email=current_user_email)
+        user_id = user_record.user_id
+
+        # Verify user is an instructor
+        is_instructor = Admins.objects.filter(user=user_record).exists()
+        if not is_instructor:
+            return redirect('app-user-page')
+
+        # Get all students (users who are not instructors)
+        students = Users.objects.filter(
+            traveler__isnull=False
+        ).exclude(
+            admins__isnull=False
+        )
+        
+        # Get student statistics
+        student_data = []
+        total_students = students.count()
+        active_students = 0
+        total_completed_tasks = 0
+        total_tasks = Task.objects.count()
+        
+        for student in students:
+            # Get last login time from Django User model
+            try:
+                last_login = User.objects.get(email=student.email).last_login
+                if last_login and (timezone.now() - last_login).days < 30:
+                    active_students += 1
+            except User.DoesNotExist:
+                last_login = None
+            
+            # Get number of completed tasks
+            completed_tasks = TaskStatus.objects.filter(
+                user_id=student.user_id,
+                status=2
+            ).count()
+            total_completed_tasks += completed_tasks
+            
+            # Calculate progress percentage
+            progress_percentage = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+            
+            student_data.append({
+                'name': student.name,
+                'email': student.email,
+                'last_login': last_login,
+                'completed_tasks': completed_tasks,
+                'progress_percentage': round(progress_percentage, 1)
+            })
+
+        # Calculate average progress
+        average_progress = (total_completed_tasks / (total_students * total_tasks * 100)) if total_students > 0 else 0
+
+        # Get task statistics
+        tasks = Task.objects.all()
+        task_stats = []
+        for task in tasks:
+            completed_count = TaskStatus.objects.filter(
+                task_id=task.tid,
+                status=2
+            ).count()
+            in_progress_count = TaskStatus.objects.filter(
+                task_id=task.tid,
+                status=1
+            ).count()
+            not_started_count = total_students - completed_count - in_progress_count
+            
+            task_stats.append({
+                'name': task.tname,
+                'difficulty': task.difficulty,
+                'completed': completed_count,
+                'in_progress': in_progress_count,
+                'not_started': not_started_count
+            })
+
+        context = {
+            'user_data': user_record,
+            'total_students': total_students,
+            'active_students': active_students,
+            'average_progress': round(average_progress, 2),
+            'total_completed_tasks': total_completed_tasks,
+            'student_data': student_data,
+            'task_stats': task_stats,
+            'total_tasks': total_tasks,
+            'is_instructor': is_instructor,
+        }
+
+        return render(request, 'DynamicPage/instructor_dashboard.html', context)
+
+    except Users.DoesNotExist:
+        messages.error(request, 'User profile not found.')
+        return redirect('login')
+    except Exception as e:
+        if settings.DEBUG:
+            raise e
+        messages.error(request, 'An error occurred while loading the dashboard.')
+        return render(request, 'DynamicPage/instructor_dashboard.html', {'error': str(e)})

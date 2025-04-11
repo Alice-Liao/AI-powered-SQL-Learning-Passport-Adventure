@@ -35,7 +35,17 @@ class BaseSignUpForm(UserCreationForm):
         return user
 
 class SignUpForm(BaseSignUpForm):
-    pass
+    def save(self, commit=True):
+        user = super().save(commit)
+        if commit:
+            # Create traveler record for the new student
+            from .models import Traveler
+            db_user = Users.objects.get(email=user.email)
+            Traveler.objects.create(
+                user=db_user,
+                progress_percentage=0
+            )
+        return user
 
 class InstructorSignUpForm(BaseSignUpForm):
     def save(self, commit=True):

@@ -9,9 +9,6 @@
 <div class="container">
     <div class="page-header">
         <h1>Welcome, {{ user_data.name }}!</h1>
-        <!-- <div class="header-actions">
-            <a href="{% url 'logout' %}" class="logout-btn">Logout</a>
-        </div> -->
     </div>
 
     {% if messages %}
@@ -37,19 +34,17 @@
                 </div>
             </div>
         </div>
-        <!-- <p>Latest Advice: {{ user_progress.latest_advice_from_llm|default:"No advice yet" }}</p>
-        <p>Completed Countries: {{ user_progress.finished_country|default:"None" }}</p> -->
     </div>
 
     <!-- Visa Section -->
     <div class="visa-section">
         <h2>Visa Status</h2>
         {% if user_visa %}
-            <p>Visa Name: {{ user_visa.vname|default:"None" }}</p >
-            <p>Visa Status: {{ user_visa.ispassed|default:"None" }}</p >
-            <p>Visa Issue Date: {{ user_visa.issuedate|default:"None" }}</p >
+            <p>Visa Name: {{ user_visa.vname|default:"None" }}</p>
+            <p>Visa Status: {{ user_visa.ispassed|default:"None" }}</p>
+            <p>Visa Issue Date: {{ user_visa.issuedate|default:"None" }}</p>
         {% else %}
-            <p>No visa data available</p >
+            <p>No visa data available</p>
         {% endif %}
     </div>
 
@@ -136,23 +131,6 @@
             
             <div class="filter-group">
                 <label class="filter-header">
-                    <input type="checkbox" id="enableQueryType" class="filter-enable"
-                           {% if selected_query_types %}checked{% endif %}>
-                    <h3>Query Type</h3>
-                </label>
-                <select name="queryType" class="filter-select" multiple
-                        {% if not selected_query_types %}disabled{% endif %}>
-                    {% for value, label in query_types %}
-                        <option value="{{ value }}" {% if value in selected_query_types %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </select>
-                <small class="help-text">Hold Ctrl/Cmd to select multiple options</small>
-            </div>
-
-            <div class="filter-group">
-                <label class="filter-header">
                     <input type="checkbox" id="enableErrors" class="filter-enable"
                            {% if request.GET.errorHistory %}checked{% endif %}>
                     <h3>Error History</h3>
@@ -166,7 +144,6 @@
                 </select>
             </div>
             
-            <!-- Add task name filter -->
             <div class="filter-group">
                 <label class="filter-header">
                     <input type="checkbox" id="enableTaskName" class="filter-enable"

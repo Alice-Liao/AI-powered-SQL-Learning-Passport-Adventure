@@ -22,7 +22,9 @@
             <li><a href="{% url 'app-home' %}">Home</a></li>
             {% if user.is_authenticated %}
             <li><a href="{% url 'app-user-page' %}">Dashboard</a></li>
+            {% if not is_instructor %}
             <li><a href="{% url 'task-list' %}">Game</a></li>
+            {% endif %}
             <li><a href="{% url 'board' %}">Board</a></li>
             <li><a href="{% url 'chat' %}">AI Chat</a></li>
             <li>
