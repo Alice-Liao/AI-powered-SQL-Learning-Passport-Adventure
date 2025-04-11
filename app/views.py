@@ -76,8 +76,13 @@ def user_page(request):
         task_name_query = request.GET.get('taskName', '').strip()
 
         # Get task statuses for this user
-        task_statuses = TaskStatus.objects.filter(user_id=user_id).select_related('task')
+        task_statuses = TaskStatus.objects.filter(user_id=user_id)
         completed_tasks = {status.task_id for status in task_statuses if status.status == 2}
+
+        # Get tasks with attempts
+        tasks_with_attempts = set(QueryHistory.objects.filter(
+            user_id=user_id
+        ).values_list('task_id', flat=True))
 
         # Get all tasks and organize by difficulty
         tasks = Task.objects.all().order_by('difficulty')
@@ -105,24 +110,37 @@ def user_page(request):
         if task_name_query:
             tasks = tasks.filter(tname__icontains=task_name_query)
 
-        # Track previous task completion for locking mechanism
-        prev_task_completed = True  # First task is always unlocked
-        
-        # Annotate tasks with status and lock information
+        # Get all countries
+        countries = Countries.objects.all()
+
+        # Create country-based task structure
         tasks_list = []
-        for task in tasks:
-            # Get task status
-            status_info = task_statuses.filter(task_id=task.tid).first()
-            task.status = status_info.status if status_info else 0
-            task.start_date = status_info.date if status_info else None
+        for country in countries:
+            country_tasks = Task.objects.filter(cid=country).order_by('difficulty')
             
-            # Set lock status based on previous task completion
-            task.is_locked = not prev_task_completed
-            
-            # Update completion status for next task
-            prev_task_completed = task.tid in completed_tasks
-            
-            tasks_list.append(task)
+            prev_task_completed = True
+            for task in country_tasks:
+                # Check if task is locked
+                is_locked = not prev_task_completed
+                
+                # Get task status
+                status = task_statuses.filter(task_id=task.tid).first()
+                
+                # Set task status
+                if task.tid in completed_tasks:
+                    task.status = 2  # Completed
+                elif task.tid in tasks_with_attempts:
+                    task.status = 1  # In Progress
+                else:
+                    task.status = 0  # Not Started
+                
+                task.is_locked = is_locked
+                task.has_attempts = task.tid in tasks_with_attempts
+                
+                # Update completion status for next task
+                prev_task_completed = task.tid in completed_tasks
+                
+                tasks_list.append(task)
 
         # Calculate progress percentage
         total_tasks = Task.objects.count()
