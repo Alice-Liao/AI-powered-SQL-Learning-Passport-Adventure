@@ -20,6 +20,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from decimal import Decimal
 import json
+from datetime import datetime
+from .llm_utils import generate_sql_from_prompt
 
 # Create your views here.
 
@@ -290,40 +292,35 @@ def chat_view(request):
     chat_history = []
 
     try:
-        # 获取当前用户信息
         current_user = request.user
         db_user = Users.objects.get(email=current_user.email)
 
-        # 判断是否为 Instructor
         is_instructor = Admins.objects.filter(user=db_user).exists()
         role = "Instructor" if is_instructor else "Student"
 
         if request.method == "POST":
             prompt = request.POST.get("message", "").strip()
             if prompt:
-                # 加入用户发言到聊天记录
                 chat_history.append({
                     "content": prompt,
                     "is_user": True,
-                    "timestamp": datetime.now().strftime("%I:%M %p")
+                    "timestamp": timezone.now().strftime("%I:%M %p")
                 })
 
                 try:
-                    # ✅ 使用 LLM 生成 SQL 并执行，返回格式化结果
                     response_text = generate_sql_from_prompt(prompt, is_admin=is_instructor)
 
-                    # 加入 AI 回复到聊天记录
                     chat_history.append({
                         "content": response_text,
                         "is_user": False,
-                        "timestamp": datetime.now().strftime("%I:%M %p")
+                        "timestamp": timezone.now().strftime("%I:%M %p")
                     })
 
                 except Exception as e:
                     chat_history.append({
                         "content": f"❌ Error: {str(e)}",
                         "is_user": False,
-                        "timestamp": datetime.now().strftime("%I:%M %p")
+                        "timestamp": timezone.now().strftime("%I:%M %p")
                     })
 
         return render(request, 'app/chat.html', {
@@ -395,10 +392,6 @@ def task_detail_view(request, task_id):
 ########################################################
 # LLM Query
 ########################################################
-
-from django.shortcuts import render
-from django.db import connection
-from .llm_utils import generate_sql_from_prompt
 
 def llm_query_view(request):
     sql = None

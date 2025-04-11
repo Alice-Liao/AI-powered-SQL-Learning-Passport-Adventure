@@ -66,31 +66,34 @@ def generate_sql_from_prompt(prompt, is_admin=False):
         {"role": "user", "content": prompt}
     ]
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        temperature=0.2
-    )
-
-    raw_sql = response.choices[0].message.content.strip()
-    sql = extract_clean_sql(raw_sql)
-
-    if not is_admin and not sql.strip().lower().startswith("select"):
-        raise ValueError("Permission denied: student users can only perform SELECT queries.")
-
     try:
-        with connection.cursor() as cursor:
-            print("🧠 Final SQL to run:\n", sql)
-            cursor.execute(sql)
-            if sql.lower().startswith("select"):
-                rows = cursor.fetchall()
-                formatted_result = "\n".join(str(row) for row in rows) or "No results."
-            else:
-                formatted_result = "✅ SQL executed successfully."
-    except Exception as e:
-        formatted_result = f"❌ Execution error: {str(e)}"
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=0.2
+        )
 
-    return f"SQL:\n{sql}\n\nResult:\n{formatted_result}"
+        raw_sql = response.choices[0].message.content.strip()
+        sql = extract_clean_sql(raw_sql)
+
+        if not is_admin and not sql.strip().lower().startswith("select"):
+            raise ValueError("Permission denied: student users can only perform SELECT queries.")
+
+        try:
+            with connection.cursor() as cursor:
+                print("🧠 Final SQL to run:\n", sql)
+                cursor.execute(sql)
+                if sql.lower().startswith("select"):
+                    rows = cursor.fetchall()
+                    formatted_result = "\n".join(str(row) for row in rows) or "No results."
+                else:
+                    formatted_result = "✅ SQL executed successfully."
+        except Exception as e:
+            formatted_result = f"❌ Execution error: {str(e)}"
+
+        return f"SQL:\n{sql}\n\nResult:\n{formatted_result}"
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
 
 def extract_clean_sql(text):
     text = text.replace("```sql", "").replace("```", "").strip()
